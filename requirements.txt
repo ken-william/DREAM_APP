@@ -1,0 +1,7 @@
+mistralai
+dotenv
+openai
+groq
+streamlit
+streamlit_mic_recorder
+matplotlib

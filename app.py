@@ -1,3 +1,4 @@
+# app.py
 import streamlit as st
 import os
 import uuid
@@ -6,14 +7,20 @@ import re
 import json
 import matplotlib.pyplot as plt
 import math
+import datetime # Ajout pour les timestamps
 
 # Import Streamlit Extras for styling
 from streamlit_extras.stylable_container import stylable_container
 from streamlit_extras.colored_header import colored_header
 from streamlit_mic_recorder import mic_recorder
+from mistralai import Mistral
 
-# Import des fonctions du backend (assurez-vous que backend.py est à jour)
-from backend import audio_transcription, generate_image
+# Import des fonctions du backend
+# Assurez-vous que backend.py est à jour avec les fonctions d'authentification et de sauvegarde des rêves
+from backend import audio_transcription, generate_image, register_user, login_user, save_dream, get_user_dreams, chat_with_mistral, init_db
+
+# Initialiser la base de données si ce n'est pas déjà fait
+init_db()
 
 dotenv.load_dotenv()
 
@@ -22,9 +29,9 @@ GROQ_API_KEY = os.getenv("GROQ_API_KEY")
 MISTRAL_API_KEY = os.getenv("MISTRAL_API_KEY")
 
 # --- Configuration de la page et styles généraux ---
-st.set_page_config(page_title="Synthétiseur de Rêves", layout="wide", initial_sidebar_state="expanded") # Layout large pour la sidebar, sidebar ouverte par défaut
+st.set_page_config(page_title="Synthétiseur de Rêves", layout="wide", initial_sidebar_state="expanded")
 
-# --- Styles CSS personnalisés pour une touche luxueuse noir et blanc ---
+# --- Styles CSS personnalisés (Le code CSS est le même que précédemment) ---
 st.markdown(
     """
     <style>
@@ -360,25 +367,77 @@ st.markdown(
     unsafe_allow_html=True
 )
 
-# Initialisation de la page actuelle et de l'historique du chat
+# Initialisation de la page actuelle, de l'historique du chat et de l'état de connexion
 if 'current_page' not in st.session_state:
     st.session_state.current_page = 'home'
 if 'chat_messages' not in st.session_state:
     st.session_state.chat_messages = []
+if 'logged_in' not in st.session_state:
+    st.session_state.logged_in = False
+if 'username' not in st.session_state:
+    st.session_state.username = None
+if 'user_id' not in st.session_state:
+    st.session_state.user_id = None
+# Ajout pour l'historique de chat spécifique au rêve analysé
+if 'dream_chat_history' not in st.session_state:
+    st.session_state.dream_chat_history = []
+if 'current_dream_for_chat' not in st.session_state:
+    st.session_state.current_dream_for_chat = None
+
+
+# --- Fonctions utilitaires (conservées) ---
+def softmax(predictions):
+    non_zero = [v for v in predictions.values() if v > 0]
+    if len(non_zero) == 1:
+        adjusted = {k: (v if v > 0 else 5) for k, v in predictions.items()}
+    else:
+        adjusted = predictions
+
+    scaled = {k: math.exp(v / 10) for k, v in adjusted.items()}
+    total = sum(scaled.values())
+    softmaxed = {k: round((v / total) * 100) for k, v in scaled.items()}
+
+    correction = 100 - sum(softmaxed.values())
+    if correction != 0:
+        max_key = max(softmaxed, key=softmaxed.get)
+        softmaxed[max_key] += correction
+    return softmaxed
 
 # --- Sidebar (Barre Latérale) ---
 with st.sidebar:
     st.markdown("<h2>Synthétiseur</h2>", unsafe_allow_html=True) # Titre de la sidebar
     st.markdown("---")
 
-    # Boutons de navigation qui changent la page affichée
-    if st.button("Accueil", key="nav_home", use_container_width=True):
-        st.session_state.current_page = 'home'
-    if st.button("Analyser Rêve", key="nav_analyze", use_container_width=True):
-        st.session_state.current_page = 'analyze'
-    if st.button("Chat", key="nav_chat", use_container_width=True):
-        st.session_state.current_page = 'chat'
-    
+    if st.session_state.logged_in:
+        st.success(f"Bienvenue, {st.session_state.username}!")
+        if st.button("Accueil", key="nav_home", use_container_width=True):
+            st.session_state.current_page = 'home'
+        if st.button("Analyser Rêve", key="nav_analyze", use_container_width=True):
+            st.session_state.current_page = 'analyze'
+        if st.button("Chat sur les Rêves", key="nav_chat", use_container_width=True):
+            st.session_state.current_page = 'chat'
+        if st.button("Historique des Rêves", key="nav_history", use_container_width=True):
+            st.session_state.current_page = 'history'
+        st.markdown("---")
+        if st.button("Déconnexion", key="logout_button", use_container_width=True):
+            st.session_state.logged_in = False
+            st.session_state.username = None
+            st.session_state.user_id = None
+            st.session_state.current_page = 'home'
+            st.session_state.chat_messages = [] # Nettoyer le chat global
+            st.session_state.dream_chat_history = [] # Nettoyer l'historique de chat du rêve
+            st.session_state.current_dream_for_chat = None # Réinitialiser le rêve pour le chat
+            st.rerun()
+    else:
+        # Boutons d'authentification si non connecté
+        if st.button("Se Connecter", key="nav_login", use_container_width=True):
+            st.session_state.current_page = 'login'
+        if st.button("Créer un Compte", key="nav_register", use_container_width=True):
+            st.session_state.current_page = 'register'
+        st.markdown("---")
+        if st.button("Accueil", key="nav_home_logged_out", use_container_width=True):
+            st.session_state.current_page = 'home'
+
     st.markdown("---")
     st.markdown("""
         <div style="font-family: 'Montserrat', sans-serif; color: #888888; font-size: 0.9em; text-align: center; margin-top: 20px;">
@@ -388,6 +447,8 @@ with st.sidebar:
     """, unsafe_allow_html=True)
 
 # --- Contenu Principal de l'Application en fonction de la page sélectionnée ---
+
+# Page d'Accueil (ouverte à tous)
 if st.session_state.current_page == 'home':
     st.markdown("<h1 class='main-title'>Explorez les Profondeurs de Vos Rêves</h1>", unsafe_allow_html=True)
     st.markdown("<p class='subtitle'>Transformez vos récits nocturnes en expériences visuelles et émotionnelles uniques grâce à l'Intelligence Artificielle.</p>", unsafe_allow_html=True)
@@ -409,215 +470,332 @@ if st.session_state.current_page == 'home':
         </div>
     """, unsafe_allow_html=True)
 
+# Pages d'authentification (Login / Register)
+elif st.session_state.current_page == 'login':
+    st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Connexion</h1>", unsafe_allow_html=True)
+    with st.form("login_form"):
+        username = st.text_input("Nom d'utilisateur", key="login_username")
+        password = st.text_input("Mot de passe", type="password", key="login_password")
+        submit_button = st.form_submit_button("Se Connecter")
 
-elif st.session_state.current_page == 'analyze':
-    st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Synthétiseur de Rêves</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.1em; color: #BBBBBB;'>Laissez l'IA analyser et visualiser votre monde onirique.</p>", unsafe_allow_html=True)
+        if submit_button:
+            if username and password:
+                user_data = login_user(username, password)
+                if user_data:
+                    st.session_state.logged_in = True
+                    st.session_state.user_id = user_data[0]
+                    st.session_state.username = user_data[1]
+                    st.success(f"Connexion réussie ! Bienvenue, {st.session_state.username}.")
+                    st.session_state.current_page = 'analyze' # Rediriger vers l'analyse des rêves
+                    st.rerun()
+                else:
+                    st.error("Nom d'utilisateur ou mot de passe incorrect.")
+            else:
+                st.warning("Veuillez entrer un nom d'utilisateur et un mot de passe.")
 
-    # --- Section Capture du rêve ---
-    colored_header(label="Capturez votre rêve", description="Enregistrez ou téléchargez un fichier audio de votre rêve.", color_name="violet-70")
+elif st.session_state.current_page == 'register':
+    st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Créer un Compte</h1>", unsafe_allow_html=True)
+    with st.form("register_form"):
+        username = st.text_input("Nom d'utilisateur", key="register_username")
+        password = st.text_input("Mot de passe", type="password", key="register_password")
+        confirm_password = st.text_input("Confirmer le mot de passe", type="password", key="register_confirm_password")
+        submit_button = st.form_submit_button("Créer le Compte")
 
-    st.markdown("#### Enregistrement vocal")
-    audio_bytes = mic_recorder(
-        start_prompt="",
-        stop_prompt="",
-        just_once=True,
-        key="recorder_analyze" # Clé unique pour cette section
-    )
-
-    if audio_bytes and len(audio_bytes['bytes']) > 0:
-        st.session_state.audio_data = audio_bytes['bytes']
-        st.success("Enregistrement terminé.")
-        st.audio(st.session_state.audio_data, format='audio/wav')
-
-    st.markdown("Télécharger un fichier audio")
-    uploaded_file = st.file_uploader("Choisissez un fichier audio (.wav, .mp3)", type=["wav", "mp3"], key="uploader_analyze")
-
-    if uploaded_file is not None:
-        st.session_state.audio_data = uploaded_file.read()
-        st.success(f"Fichier '{uploaded_file.name}' téléchargé.")
-        st.audio(st.session_state.audio_data, format=uploaded_file.type)
-
-    # --- Fonctions utilitaires ---
-    def softmax(predictions):
-        non_zero = [v for v in predictions.values() if v > 0]
-        if len(non_zero) == 1:
-            adjusted = {k: (v if v > 0 else 5) for k, v in predictions.items()}
-        else:
-            adjusted = predictions
-
-        scaled = {k: math.exp(v / 10) for k, v in adjusted.items()}
-        total = sum(scaled.values())
-        softmaxed = {k: round((v / total) * 100) for k, v in scaled.items()}
-
-        correction = 100 - sum(softmaxed.values())
-        if correction != 0:
-            max_key = max(softmaxed, key=softmaxed.get)
-            softmaxed[max_key] += correction
-        return softmaxed
-
-    # --- Bouton de traitement principal ---
-    if st.session_state.get("audio_data"):
-        with stylable_container(
-            key="process_button_container",
-            css_styles="""
-                button { 
-                    background-color: #7e22ce;
-                    color: white;
-                    border: 1px solid #9333ea;
-                    border-radius: 15px;
-                    padding: 18px 40px;
-                    font-weight: 700;
-                    font-size: 1.5em;
-                    width: 100%;
-                    margin-top: 40px;
-                    box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
-                }
-                button:hover {
-                    background-color: #9333ea;
-                    border-color: #a755f7;
-                    transform: translateY(-3px);
-                }
-                button:active {
-                    transform: translateY(0);
-                }
-            """,
-        ):
-            process_button = st.button("Analyser mon Rêve", key="analyze_dream_button")
-    else:
-        st.info("Enregistrez ou téléchargez un audio pour lancer l'analyse.")
-        process_button = False
-
-    if process_button:
-        audio_path = "temp_processing.wav"
-        with open(audio_path, "wb") as f:
-            f.write(st.session_state.audio_data)
-
-        st.session_state.raw_prompt = None
-        st.session_state.image_path = None
-        st.session_state.emotion_json = None
-
-        # --- Transcription ---
-        colored_header(label="Transcription du rêve", description="Conversion de votre audio en texte.", color_name="violet-70")
-        with st.spinner("Transcription audio en texte..."):
-            try:
-                st.session_state.raw_prompt = audio_transcription(audio_path)
-                st.success("Transcription terminée.")
-                st.markdown(f"**Votre rêve :**\n\n*\"_{st.session_state.raw_prompt}_\"*")
-            except Exception as e:
-                st.error(f"Erreur lors de la transcription : {e}")
-
-        # --- Génération d'image ---
-        if st.session_state.raw_prompt:
-            colored_header(label="Visualisation du rêve", description="Création d'une image unique à partir de votre récit.", color_name="violet-70")
-            with st.spinner("Génération de l'image..."):
-                try:
-                    from mistralai import Mistral
-                    client_mistral = Mistral(api_key=MISTRAL_API_KEY)
-                    reform_response = client_mistral.chat.complete(
-                        model="mistral-small-latest",
-                        messages=[
-                            {"role": "system", "content": "Tu es un assistant qui reformule des récits de rêve pour en faire des prompts d'image courts, créatifs et clairs, optimisés pour la génération visuelle. Utilise des mots-clés descriptifs et des adjectifs évocateurs, inspirés de l'art conceptuel, avec une ambiance cinématographique. Concentre-toi sur l'essentiel pour un prompt percutant."},
-                            {"role": "user", "content": f"Reformule ce rêve en un prompt d'image percutant, réaliste et évocateur : '{st.session_state.raw_prompt}'."}
-                        ]
-                    )
-                    image_prompt = reform_response.choices[0].message.content
-                    st.info(f"**Prompt d'image :**\n\n*\"{image_prompt}\"*")
-
-                    image_output_path = generate_image(f"Génère une image réaliste basée sur ce rêve : {image_prompt}")
-
-                    st.session_state.image_path = image_output_path
-                    
-                    if st.session_state.image_path:
-                        st.success("Image générée !")
-                        st.image(st.session_state.image_path, caption="Votre rêve visualisé", use_container_width=True)
+        if submit_button:
+            if username and password and confirm_password:
+                if password == confirm_password:
+                    user_id = register_user(username, password)
+                    if user_id:
+                        st.success("Compte créé avec succès ! Vous pouvez maintenant vous connecter.")
+                        st.session_state.current_page = 'login' # Rediriger vers la page de connexion
+                        st.rerun()
                     else:
-                        st.warning("Aucune image n’a été générée. Réessayez ou ajustez le rêve.")
-                except Exception as e:
-                    st.error(f"Erreur lors de la génération d'image : {e}")
+                        st.error("Ce nom d'utilisateur existe déjà. Veuillez en choisir un autre.")
+                else:
+                    st.error("Les mots de passe ne correspondent pas.")
+            else:
+                st.warning("Veuillez remplir tous les champs.")
 
-        # --- Analyse émotionnelle ---
-        if st.session_state.raw_prompt:
-            colored_header(label="Analyse émotionnelle", description="Décodage des émotions dominantes de votre rêve.", color_name="violet-70")
-            with st.spinner("Analyse des émotions..."):
-                try:
-                    from mistralai import Mistral
-                    client_mistral_emotion = Mistral(api_key=MISTRAL_API_KEY)
+# Pages nécessitant une connexion
+elif not st.session_state.logged_in:
+    st.warning("Veuillez vous connecter ou créer un compte pour accéder à cette fonctionnalité.")
+    st.session_state.current_page = 'login' # Rediriger automatiquement vers la page de connexion
+    st.rerun()
 
-                    emotion_response = client_mistral_emotion.chat.complete(
-                        model="mistral-small-latest",
-                        messages=[
-                            {"role": "system", "content": (
-                                "Tu es un assistant expert en interprétation de rêves qui analyse les émotions présentes. "
-                                "Réponds UNIQUEMENT avec un JSON valide contenant les clés 'Joie', 'Anxiété', 'Tristesse', 'Colère', 'Peur', 'Surprise', 'Neutre'. "
-                                "Assigne un score sur 10 (0 étant aucune présence, 10 étant très forte présence) pour chaque émotion. "
-                                "Ne rajoute jamais du texte avant ou après le JSON. Si une émotion n'est pas présente, son score est 0."
-                            )},
-                            {"role": "user", "content": f"Analyse les émotions de ce rêve et donne-moi une estimation en score sur 10 pour chaque catégorie : '{st.session_state.raw_prompt}'. Si une émotion n'est pas pertinente, donne 0."}
-                        ]
-                    )
-                    text = emotion_response.choices[0].message.content
-                    match = re.search(r"\{.*\}", text, re.DOTALL)
-                    if not match:
-                        raise ValueError("Aucun JSON détecté dans la réponse d'analyse émotionnelle.")
-                    
-                    emotion_json_raw = json.loads(match.group(0))
-                    
-                    expected_emotions = ['Joie', 'Anxiété', 'Tristesse', 'Colère', 'Peur', 'Surprise', 'Neutre']
-                    full_emotion_json_raw = {emotion: emotion_json_raw.get(emotion, 0) for emotion in expected_emotions}
+else: # L'utilisateur est connecté, afficher les pages protégées
+    if st.session_state.current_page == 'analyze':
+        st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Synthétiseur de Rêves</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 1.1em; color: #BBBBBB;'>Laissez l'IA analyser et visualiser votre monde onirique.</p>", unsafe_allow_html=True)
 
-                    st.session_state.emotion_json = softmax(full_emotion_json_raw)
-                    st.success("Analyse émotionnelle terminée.")
-                    st.markdown("**Répartition des émotions :**")
-                    
-                    for emotion, percentage in st.session_state.emotion_json.items():
-                        st.write(f"**{emotion} :** {percentage}%")
-                        st.progress(percentage / 100.0)
+        # --- Section Capture du rêve ---
+        colored_header(label="Capturez votre rêve", description="Enregistrez ou téléchargez un fichier audio de votre rêve.", color_name="violet-70")
 
-                    labels = list(st.session_state.emotion_json.keys())
-                    values = [st.session_state.emotion_json[k] for k in labels]
-                    
-                    fig, ax = plt.subplots(figsize=(7, 7))
-                    ax.pie(values, labels=labels, autopct='%1.0f%%', startangle=90,
-                           colors=['#FFDDC1', '#FFADAD', '#A0CED9', '#B5EAD7', '#C7CEEA', '#FCE9AD', '#E0E0E0'])
-                    ax.axis('equal')
-                    ax.set_title("Distribution émotionnelle de votre rêve", color='#FFFFFF')
-                    st.pyplot(fig)
+        st.markdown("#### Enregistrement vocal")
+        audio_bytes = mic_recorder(
+            start_prompt="",
+            stop_prompt="",
+            just_once=True,
+            key="recorder_analyze"
+        )
 
-                except Exception as e:
-                    st.error(f"Erreur lors de l'analyse émotionnelle : {e}")
+        if audio_bytes and len(audio_bytes['bytes']) > 0:
+            st.session_state.audio_data = audio_bytes['bytes']
+            st.success("Enregistrement terminé.")
+            st.audio(st.session_state.audio_data, format='audio/wav')
 
-        # Nettoyage du fichier audio temporaire
-        if os.path.exists(audio_path):
-            os.remove(audio_path)
+        st.markdown("Télécharger un fichier audio")
+        uploaded_file = st.file_uploader("Choisissez un fichier audio (.wav, .mp3)", type=["wav", "mp3"], key="uploader_analyze")
 
-elif st.session_state.current_page == 'chat':
-    st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Dialogue Onirique</h1>", unsafe_allow_html=True)
-    st.markdown("<p style='text-align: center; font-size: 1.1em; color: #BBBBBB;'>Discutez avec notre IA pour explorer vos rêves en profondeur.</p>", unsafe_allow_html=True)
+        if uploaded_file is not None:
+            st.session_state.audio_data = uploaded_file.read()
+            st.success(f"Fichier '{uploaded_file.name}' téléchargé.")
+            st.audio(st.session_state.audio_data, format=uploaded_file.type)
 
-    # Conteneur pour les messages de chat
-    st.markdown('<div class="chat-container">', unsafe_allow_html=True)
-    for msg in st.session_state.chat_messages:
-        if msg["role"] == "user":
-            st.markdown(f'<div class="chat-message user-message">{msg["content"]}</div>', unsafe_allow_html=True)
+        # --- Bouton de traitement principal ---
+        if st.session_state.get("audio_data"):
+            with stylable_container(
+                key="process_button_container",
+                css_styles="""
+                    button { 
+                        background-color: #7e22ce;
+                        color: white;
+                        border: 1px solid #9333ea;
+                        border-radius: 15px;
+                        padding: 18px 40px;
+                        font-weight: 700;
+                        font-size: 1.5em;
+                        width: 100%;
+                        margin-top: 40px;
+                        box-shadow: 0 6px 15px rgba(0, 0, 0, 0.4);
+                    }
+                    button:hover {
+                        background-color: #9333ea;
+                        border-color: #a755f7;
+                        transform: translateY(-3px);
+                    }
+                    button:active {
+                        transform: translateY(0);
+                    }
+                """,
+            ):
+                process_button = st.button("Analyser mon Rêve", key="analyze_dream_button")
         else:
-            st.markdown(f'<div class="chat-message ai-message">{msg["content"]}</div>', unsafe_allow_html=True)
-    st.markdown('</div>', unsafe_allow_html=True)
+            st.info("Enregistrez ou téléchargez un audio pour lancer l'analyse.")
+            process_button = False
 
-    # Entrée de texte pour le chat
-    with st.form("chat_form", clear_on_submit=True):
-        col1, col2 = st.columns([5, 1])
-        with col1:
-            user_input = st.text_input("Votre message...", label_visibility="collapsed")
-        with col2:
-            send_button = st.form_submit_button("Envoyer")
-    
-    if send_button and user_input:
-        st.session_state.chat_messages.append({"role": "user", "content": user_input})
-        # Simulation d'une réponse de l'IA (non fonctionnel avec LLM réel ici)
-        ai_response = f"J'ai bien reçu votre message : '{user_input}'. Comment puis-je vous aider à explorer votre rêve ?"
-        st.session_state.chat_messages.append({"role": "ai", "content": ai_response})
-        st.rerun() # Pour rafraîchir l'affichage du chat
+        if process_button:
+            audio_path = "temp_processing.wav"
+            with open(audio_path, "wb") as f:
+                f.write(st.session_state.audio_data)
+
+            st.session_state.raw_prompt = None
+            st.session_state.image_path = None
+            st.session_state.emotion_json = None
+
+            # --- Transcription ---
+            colored_header(label="Transcription du rêve", description="Conversion de votre audio en texte.", color_name="violet-70")
+            with st.spinner("Transcription audio en texte..."):
+                try:
+                    st.session_state.raw_prompt = audio_transcription(audio_path)
+                    st.success("Transcription terminée.")
+                    st.markdown(f"**Votre rêve :**\n\n*\"_{st.session_state.raw_prompt}_\"*")
+                except Exception as e:
+                    st.error(f"Erreur lors de la transcription : {e}")
+                    st.session_state.raw_prompt = None # Assurez-vous que le prompt est None en cas d'erreur
+            
+            # Stocker le raw_prompt pour le chat futur
+            if st.session_state.raw_prompt:
+                st.session_state.current_dream_for_chat = st.session_state.raw_prompt
+                st.session_state.dream_chat_history = [] # Réinitialiser l'historique du chat pour ce nouveau rêve
+
+            # --- Génération d'image ---
+            if st.session_state.raw_prompt:
+                colored_header(label="Visualisation du rêve", description="Création d'une image unique à partir de votre récit.", color_name="violet-70")
+                with st.spinner("Génération de l'image..."):
+                    try:
+                        # Assurez-vous d'avoir la clé MISTRAL_API_KEY disponible ici ou passée à generate_image
+                        if not MISTRAL_API_KEY:
+                            raise ValueError("MISTRAL_API_KEY non trouvée. Veuillez la définir dans votre fichier .env")
+                        
+                        client_mistral = Mistral(api_key=MISTRAL_API_KEY)
+                        reform_response = client_mistral.chat.complete(
+                            model="mistral-small-latest",
+                            messages=[
+                                {"role": "system", "content": "Tu es un assistant qui reformule des récits de rêve pour en faire des prompts d'image courts, créatifs et clairs, optimisés pour la génération visuelle. Utilise des mots-clés descriptifs et des adjectifs évocateurs, inspirés de l'art conceptuel, avec une ambiance cinématographique. Concentre-toi sur l'essentiel pour un prompt percutant."},
+                                {"role": "user", "content": f"Reformule ce rêve en un prompt d'image percutant, réaliste et évocateur : '{st.session_state.raw_prompt}'."}
+                            ]
+                        )
+                        image_prompt = reform_response.choices[0].message.content
+                        st.info(f"**Prompt d'image :**\n\n*\"{image_prompt}\"*")
+
+                        image_output_path = generate_image(f"Génère une image réaliste basée sur ce rêve : {image_prompt}")
+
+                        st.session_state.image_path = image_output_path
+                        
+                        if st.session_state.image_path:
+                            st.success("Image générée !")
+                            st.image(st.session_state.image_path, caption="Votre rêve visualisé", use_container_width=True)
+                        else:
+                            st.warning("Aucune image n’a été générée. Réessayez ou ajustez le rêve.")
+                    except Exception as e:
+                        st.error(f"Erreur lors de la génération d'image : {e}")
+
+            # --- Analyse émotionnelle ---
+            if st.session_state.raw_prompt:
+                colored_header(label="Analyse émotionnelle", description="Décodage des émotions dominantes de votre rêve.", color_name="violet-70")
+                with st.spinner("Analyse des émotions..."):
+                    try:
+                        if not MISTRAL_API_KEY:
+                            raise ValueError("MISTRAL_API_KEY non trouvée. Veuillez la définir dans votre fichier .env")
+
+                        client_mistral_emotion = Mistral(api_key=MISTRAL_API_KEY)
+
+                        emotion_response = client_mistral_emotion.chat.complete(
+                            model="mistral-small-latest",
+                            messages=[
+                                {"role": "system", "content": (
+                                    "Tu es un assistant expert en interprétation de rêves qui analyse les émotions présentes. "
+                                    "Réponds UNIQUEMENT avec un JSON valide contenant les clés 'Joie', 'Anxiété', 'Tristesse', 'Colère', 'Peur', 'Surprise', 'Neutre'. "
+                                    "Assigne un score sur 10 (0 étant aucune présence, 10 étant très forte présence) pour chaque émotion. "
+                                    "Ne rajoute jamais du texte avant ou après le JSON. Si une émotion n'est pas présente, son score est 0."
+                                )},
+                                {"role": "user", "content": f"Analyse les émotions de ce rêve et donne-moi une estimation en score sur 10 pour chaque catégorie : '{st.session_state.raw_prompt}'. Si une émotion n'est pas pertinente, donne 0."}
+                            ]
+                        )
+                        text = emotion_response.choices[0].message.content
+                        match = re.search(r"\{.*\}", text, re.DOTALL)
+                        if not match:
+                            raise ValueError("Aucun JSON détecté dans la réponse d'analyse émotionnelle.")
+                        
+                        emotion_json_raw = json.loads(match.group(0))
+                        
+                        expected_emotions = ['Joie', 'Anxiété', 'Tristesse', 'Colère', 'Peur', 'Surprise', 'Neutre']
+                        full_emotion_json_raw = {emotion: emotion_json_raw.get(emotion, 0) for emotion in expected_emotions}
+
+                        st.session_state.emotion_json = softmax(full_emotion_json_raw)
+                        st.success("Analyse émotionnelle terminée.")
+                        st.markdown("**Répartition des émotions :**")
+                        
+                        for emotion, percentage in st.session_state.emotion_json.items():
+                            st.write(f"**{emotion} :** {percentage}%")
+                            st.progress(percentage / 100.0)
+
+                        labels = list(st.session_state.emotion_json.keys())
+                        values = [st.session_state.emotion_json[k] for k in labels]
+                        
+                        fig, ax = plt.subplots(figsize=(7, 7))
+                        ax.pie(values, labels=labels, autopct='%1.0f%%', startangle=90,
+                                colors=['#FFDDC1', '#FFADAD', '#A0CED9', '#B5EAD7', '#C7CEEA', '#FCE9AD', '#E0E0E0'])
+                        ax.axis('equal')
+                        ax.set_title("Distribution émotionnelle de votre rêve", color='#FFFFFF')
+                        st.pyplot(fig)
+
+                    except Exception as e:
+                        st.error(f"Erreur lors de l'analyse émotionnelle : {e}")
+
+            # --- Sauvegarde du rêve dans l'historique si tout est complet ---
+            if st.session_state.raw_prompt and st.session_state.image_path and st.session_state.emotion_json and st.session_state.user_id:
+                try:
+                    # Convertir le JSON des émotions en string avant de sauvegarder
+                    emotion_json_str = json.dumps(st.session_state.emotion_json)
+                    save_dream(
+                        st.session_state.user_id,
+                        st.session_state.raw_prompt,
+                        st.session_state.image_path,
+                        emotion_json_str
+                    )
+                    st.success("Rêve sauvegardé dans votre historique !")
+                except Exception as e:
+                    st.error(f"Erreur lors de la sauvegarde du rêve : {e}")
+
+            # Nettoyage du fichier audio temporaire
+            if os.path.exists(audio_path):
+                os.remove(audio_path)
+
+    elif st.session_state.current_page == 'chat':
+        st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Dialogue Onirique</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 1.1em; color: #BBBBBB;'>Discutez avec notre IA pour explorer vos rêves en profondeur.</p>", unsafe_allow_html=True)
+
+        if not st.session_state.current_dream_for_chat:
+            st.info("Veuillez analyser un rêve d'abord pour pouvoir discuter à son sujet.")
+        else:
+            st.markdown(f"**Contexte du rêve actuel :** *\"_{st.session_state.current_dream_for_chat[:150]}..._\"*")
+
+            # Conteneur pour les messages de chat
+            st.markdown('<div class="chat-container">', unsafe_allow_html=True)
+            for msg in st.session_state.dream_chat_history: # Utiliser l'historique spécifique au rêve
+                if msg["role"] == "user":
+                    st.markdown(f'<div class="chat-message user-message">{msg["content"]}</div>', unsafe_allow_html=True)
+                else:
+                    st.markdown(f'<div class="chat-message ai-message">{msg["content"]}</div>', unsafe_allow_html=True)
+            st.markdown('</div>', unsafe_allow_html=True)
+
+            # Entrée de texte pour le chat
+            with st.form("chat_form", clear_on_submit=True):
+                col1, col2 = st.columns([5, 1])
+                with col1:
+                    user_input = st.text_input("Votre message...", label_visibility="collapsed")
+                with col2:
+                    send_button = st.form_submit_button("Envoyer")
+            
+            if send_button and user_input:
+                st.session_state.dream_chat_history.append({"role": "user", "content": user_input})
+                with st.spinner("L'IA réfléchit..."):
+                    try:
+                        ai_response = chat_with_mistral(
+                            st.session_state.user_id, # Passer l'ID utilisateur (peut être utilisé pour la personnalisation future)
+                            st.session_state.current_dream_for_chat,
+                            user_input,
+                            st.session_state.dream_chat_history # Passer l'historique complet pour maintenir le contexte
+                        )
+                        st.session_state.dream_chat_history.append({"role": "ai", "content": ai_response})
+                    except Exception as e:
+                        st.error(f"Erreur lors de la discussion avec l'IA : {e}")
+                st.rerun() # Pour rafraîchir l'affichage du chat
+
+    elif st.session_state.current_page == 'history':
+        st.markdown("<h1 style='text-align: center; font-family: \"Playfair Display\", serif;'>Historique des Rêves</h1>", unsafe_allow_html=True)
+        st.markdown("<p style='text-align: center; font-size: 1.1em; color: #BBBBBB;'>Retrouvez et explorez tous vos rêves passés.</p>", unsafe_allow_html=True)
+
+        user_dreams = get_user_dreams(st.session_state.user_id)
+
+        if not user_dreams:
+            st.info("Vous n'avez pas encore d'historique de rêves. Analysez un rêve pour commencer !")
+        else:
+            for i, dream in enumerate(user_dreams):
+                # Utilisation d'un expander pour chaque rêve
+                with st.expander(f"Rêve du {datetime.datetime.strptime(dream['timestamp'], '%Y-%m-%d %H:%M:%S').strftime('%d/%m/%Y à %H:%M')} (ID: {dream['id']})"):
+                    st.markdown(f"**Votre Récit :**\n\n*\"_{dream['raw_prompt']}_\"*")
+
+                    if dream['image_path'] and os.path.exists(dream['image_path']):
+                        st.image(dream['image_path'], caption="Image du rêve", use_container_width=True)
+                    else:
+                        st.warning("Image non disponible ou introuvable.")
+
+                    st.markdown("**Analyse Émotionnelle :**")
+                    if dream['emotion_analysis']:
+                        for emotion, percentage in dream['emotion_analysis'].items():
+                            st.write(f"**{emotion} :** {percentage}%")
+                            st.progress(percentage / 100.0)
+                        
+                        labels = list(dream['emotion_analysis'].keys())
+                        values = [dream['emotion_analysis'][k] for k in labels]
+                        fig, ax = plt.subplots(figsize=(6, 6))
+                        ax.pie(values, labels=labels, autopct='%1.0f%%', startangle=90,
+                                colors=['#FFDDC1', '#FFADAD', '#A0CED9', '#B5EAD7', '#C7CEEA', '#FCE9AD', '#E0E0E0'])
+                        ax.axis('equal')
+                        ax.set_title("Distribution émotionnelle", color='#FFFFFF')
+                        st.pyplot(fig)
+                    else:
+                        st.info("Analyse émotionnelle non disponible.")
+                    
+                    # Bouton pour utiliser ce rêve comme contexte pour le chat
+                    if st.button(f"Discuter de ce rêve (ID: {dream['id']})", key=f"chat_dream_{dream['id']}", use_container_width=True):
+                        st.session_state.current_dream_for_chat = dream['raw_prompt']
+                        st.session_state.dream_chat_history = [] # Réinitialiser l'historique pour le nouveau contexte
+                        st.session_state.current_page = 'chat'
+                        st.rerun()
+
 
 # --- Footer Minimaliste ---
 st.markdown("---")

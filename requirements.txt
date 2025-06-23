@@ -1,7 +1,10 @@
-mistralai
+streamlit
+streamlit-mic-recorder
 dotenv
 openai
 groq
-streamlit
-streamlit_mic_recorder
+mistralai
 matplotlib
+python-dotenv
+bcrypt
+passlib

@@ -1,7 +1,6 @@
 # DREAM_APP
 Plongez au cœur de votre subconscient. Laissez parlerz vos rêves
 
-
 # Synthétiseur de Rêves : Explorez Votre Monde Onirique avec l'IA
 
 ## Qu'est-ce que le Synthétiseur de Rêves ?

@@ -2,7 +2,7 @@
 Plongez au cœur de votre subconscient. Laissez parlerz vos rêves
 
 
-# 🌙 Synthétiseur de Rêves : Explorez Votre Monde Onirique avec l'IA
+# Synthétiseur de Rêves : Explorez Votre Monde Onirique avec l'IA
 
 ## Qu'est-ce que le Synthétiseur de Rêves ?
 
@@ -10,7 +10,7 @@ Le "Synthétiseur de Rêves" est une application web innovante conçue pour tran
 
 Grâce à une interface conviviale, vous pouvez facilement enregistrer ou transcrire vos rêves. L'IA prend ensuite le relais pour décoder les émotions, générer des images uniques inspirées de vos récits, et même vous permettre de dialoguer pour une exploration plus profonde de votre monde intérieur.
 
-## ✨ Fonctionnalités Clés
+## Fonctionnalités Clés
 
 * **Capture de Rêve Flexible :**
     * **Enregistrement Vocal :** Dictez vos rêves directement via le microphone.

@@ -1,0 +1,39 @@
+/* frontend_dream_synthesizer/src/index.css */
+/* Import de la police Inter de Google Fonts */
+/* La balise de lien Markdown doit être supprimée ici, ne gardez que l'URL directe */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+/* Tailwind CSS directives */
+/* Ces trois lignes sont essentielles et doivent être au début */
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Custom base styles - Ces styles appliquent les classes Tailwind par défaut
+   ou des styles CSS personnalisés qui ne sont pas en conflit avec Tailwind. */
+body {
+  font-family: 'Inter', sans-serif;
+  /* Utilise les classes Tailwind pour le fond et la couleur du texte */
+  @apply bg-gray-50 text-gray-800;
+}
+
+/* Styles pour les éléments interactifs (boutons, inputs)
+   Ces classes @apply ajoutent des styles Tailwind par défaut à tous les boutons et inputs.
+   Elles peuvent être surchargées par des classes plus spécifiques sur les éléments HTML/JSX. */
+button {
+  @apply rounded-lg focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500;
+}
+
+input {
+  @apply rounded-lg border-gray-300 focus:border-indigo-500 focus:ring focus:ring-indigo-200 focus:ring-opacity-50;
+}
+
+/* Styles de base pour les titres */
+h1, h2, h3, h4, h5, h6 {
+  @apply text-gray-900; /* Assure que les titres sont sombres par défaut */
+}
+
+/* Styles de base pour les liens */
+a {
+  @apply text-indigo-600 hover:text-indigo-800 transition duration-200;
+}

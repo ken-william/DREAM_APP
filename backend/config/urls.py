@@ -15,8 +15,10 @@ Including another URLconf
     2. Add a URL to urlpatterns:  path('blog/', include('blog.urls'))
 """
 from django.contrib import admin
+from dreams.views import create_dream_view
 from django.urls import path
 
 urlpatterns = [
     path('admin/', admin.site.urls),
+    path('dreams/create', create_dream_view, name='create_dream'),  # Assuming 'dreams.urls' is the correct import for your dreams app
 ]

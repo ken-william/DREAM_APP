@@ -1,5 +1,6 @@
 import os
 import uuid
+import base64
 import dotenv
 import re
 import json
@@ -99,6 +100,8 @@ def classify_text(raw_prompt: str) -> dict:
     return emotion_json
 
 # IMAGE GENERATION WITH MISTRAL
+
+"""
 def generate_image(prompt, output_dir="images", model="mistral-medium-latest"):
 
     client_mistralai = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
@@ -132,5 +135,38 @@ def generate_image(prompt, output_dir="images", model="mistral-medium-latest"):
                         f.write(data)
                     print(f"Image enregistrée : {path}")
                     return path
+    print("Aucune image générée.")
+    return None
+
+"""
+
+def generate_image_base64(prompt, model="mistral-medium-latest"):
+    client_mistralai = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+
+    image_agent = client_mistralai.beta.agents.create(
+        model=model,
+        name="Image Generator",
+        description="Génère des images à partir d’un prompt.",
+        instructions="Utilise l’outil image_generation pour créer des images réalistes.",
+        tools=[{"type": "image_generation"}],
+        completion_args={"temperature": 0.3, "top_p": 0.95},
+    )
+
+    response = client_mistralai.beta.conversations.start(
+        agent_id=image_agent.id,
+        inputs=prompt,
+        stream=False,
+    )
+
+    for output in response.outputs:
+        if getattr(output, "type", "") == "tool.execution" and output.name == "image_generation":
+            continue
+        if getattr(output, "content", None):
+            for chunk in output.content:
+                if isinstance(chunk, ToolFileChunk):
+                    data = client_mistralai.files.download(file_id=chunk.file_id).read()
+                    base64_encoded = base64.b64encode(data).decode('utf-8')
+                    return base64_encoded
+
     print("Aucune image générée.")
     return None

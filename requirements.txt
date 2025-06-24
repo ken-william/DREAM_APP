@@ -6,3 +6,4 @@ streamlit
 streamlit_mic_recorder
 matplotlib
 django
+django-rest-framework

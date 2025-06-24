@@ -11,7 +11,7 @@ class Dream(models.Model):
     prompt = models.TextField()
     reformed_prompt = models.TextField()
     transcription = models.TextField()
-    img_id = models.IntegerField()  # ou ForeignKey vers un modèle d'image si tu veux le lier
+    img_b64 = models.TextField(blank=True, null=True)
     date = models.DateField(auto_now_add=True)
     privacy = models.CharField(max_length=20, choices=PRIVACY_CHOICES)
 

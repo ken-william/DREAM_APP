@@ -15,19 +15,23 @@ dotenv.load_dotenv()
 
 # Transcription using Groq's Whisper model
 
-def transcribe_audio(file_path: str) -> str:
+def transcribe_audio(file):
     """
     Transcribe audio file using Groq's Whisper model.
     """
     client_groq = Groq(api_key=os.environ["GROQ_API_KEY"])
 
-    with open(file_path, "rb") as file:
-        transcription = client_groq.audio.transcriptions.create(
-            file=file,
-            model="whisper-large-v3-turbo",
-            response_format="verbose_json"
-        )
-    return transcription.text
+    transcription = client_groq.audio.transcriptions.create(
+        file=file,
+        model="whisper-large-v3-turbo",
+        response_format="verbose_json"
+    )
+
+    transcription = transcription.text
+
+    print("Transcription:", transcription)
+
+    return transcription
 
 def rephrase_text(raw_text: str) -> str:
     
@@ -53,7 +57,11 @@ def rephrase_text(raw_text: str) -> str:
         ]
     )
 
-    return response.choices[0].message.content
+    prompt = response.choices[0].message.content
+
+    print("prompt:", prompt)
+
+    return prompt
 
 def softmax(predictions):
     non_zero = [v for v in predictions.values() if v > 0]

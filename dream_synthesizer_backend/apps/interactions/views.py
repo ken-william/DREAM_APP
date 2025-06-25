@@ -1,371 +1,273 @@
-from rest_framework import status
+# apps/interactions/views.py
+from rest_framework import viewsets, status
 from rest_framework.response import Response
-from rest_framework.views import APIView
 from rest_framework.permissions import IsAuthenticated
-from rest_framework.generics import ListAPIView, RetrieveUpdateDestroyAPIView, CreateAPIView
-from rest_framework.exceptions import ValidationError
+from rest_framework.decorators import action
 from django.db.models import Q
 from django.shortcuts import get_object_or_404
-
 from django.contrib.auth.models import User
-from apps.dreams.models import Dream # Pour accéder au modèle Dream
-from apps.dreams.serializers import DreamSerializer # Pour sérialiser les rêves dans le feed
+
 from .models import Friendship, Like, Comment, Notification
-from .serializers import FriendshipSerializer, LikeSerializer, CommentSerializer, NotificationSerializer
+from .serializers import (
+    FriendshipSerializer, FriendshipRequestSerializer, FriendshipActionSerializer,
+    LikeSerializer, CommentSerializer, NotificationSerializer
+)
+from apps.dreams.models import Dream # Importez le modèle Dream
 
-from apps.users.serializers import UserSerializer
-# --- Friendship Views ---
-
-class FriendRequestView(APIView):
+class FriendshipViewSet(viewsets.ModelViewSet):
     """
-    Vue API pour envoyer et gérer les demandes d'amitié.
+    API endpoint pour gérer les amitiés.
+    - list: Récupère les amitiés acceptées de l'utilisateur.
+    - request: Envoie une demande d'ami.
+    - request_action: Accepte ou rejette une demande d'ami.
     """
+    queryset = Friendship.objects.all()
+    serializer_class = FriendshipSerializer
     permission_classes = [IsAuthenticated]
 
-    def post(self, request, *args, **kwargs):
-        """Envoyer une demande d'ami."""
-        user_to_add_id = request.data.get('user_id')
-        if not user_to_add_id:
-            return Response({"error": "User ID to add is required."}, status=status.HTTP_400_BAD_REQUEST)
+    def get_queryset(self):
+        """
+        Retourne toutes les amitiés acceptées où l'utilisateur est user1 ou user2.
+        """
+        user = self.request.user
+        return Friendship.objects.filter(
+            Q(user1=user) | Q(user2=user),
+            status='accepted'
+        ).distinct()
+    
+    # Nous désactivons les méthodes par défaut (create, retrieve, update, destroy)
+    # car nous utiliserons des actions personnalisées pour une logique plus fine.
+    http_method_names = ['get'] # Autoriser seulement GET pour la liste des amis.
 
-        try:
-            user_to_add = User.objects.get(id=user_to_add_id)
-        except User.DoesNotExist:
-            return Response({"error": "User not found."}, status=status.HTTP_404_NOT_FOUND)
+    @action(detail=False, methods=['post'], serializer_class=FriendshipRequestSerializer)
+    def request(self, request):
+        """
+        Envoie une demande d'ami à un autre utilisateur.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        target_user_id = serializer.validated_data['user_id']
+        target_user = get_object_or_404(User, id=target_user_id)
+        current_user = request.user
 
-        if request.user == user_to_add:
-            return Response({"error": "You cannot send a friend request to yourself."}, status=status.HTTP_400_BAD_REQUEST)
+        if current_user == target_user:
+            return Response({"error": "Vous ne pouvez pas vous envoyer une demande d'ami à vous-même."}, status=status.HTTP_400_BAD_REQUEST)
 
-        # Vérifier si une demande est déjà en attente ou si déjà amis
+        # Vérifier si une demande existe déjà dans n'importe quel sens ou si déjà amis
         existing_friendship = Friendship.objects.filter(
-            Q(user1=request.user, user2=user_to_add) | Q(user1=user_to_add, user2=request.user)
+            (Q(user1=current_user, user2=target_user) | Q(user1=target_user, user2=current_user))
         ).first()
 
         if existing_friendship:
             if existing_friendship.status == 'pending':
-                return Response({"message": "Friend request already pending."}, status=status.HTTP_200_OK)
+                return Response({"message": "Une demande d'ami est déjà en attente."}, status=status.HTTP_200_OK)
             elif existing_friendship.status == 'accepted':
-                return Response({"message": "Already friends."}, status=status.HTTP_200_OK)
-
-        friendship = Friendship.objects.create(
-            user1=request.user,
-            user2=user_to_add,
-            status='pending'
-        )
+                return Response({"message": "Vous êtes déjà amis avec cet utilisateur."}, status=status.HTTP_200_OK)
+            elif existing_friendship.status == 'rejected':
+                # Si rejetée, on peut permettre de renvoyer ou ne rien faire
+                # Ici, on va re-créer une demande si elle était rejetée (ou la passer en pending)
+                existing_friendship.status = 'pending'
+                existing_friendship.save()
+                return Response({"message": "Demande d'ami renvoyée."}, status=status.HTTP_200_OK)
+        
+        # Créer la nouvelle demande d'ami
+        friendship = Friendship.objects.create(user1=current_user, user2=target_user, status='pending')
+        # Créer une notification pour le destinataire
         Notification.objects.create(
-            recipient=user_to_add,
-            sender=request.user,
+            recipient=target_user,
+            sender=current_user,
             notification_type='friend_request',
-            content=f"{request.user.username} vous a envoyé une demande d'ami."
+            content=f"{current_user.username} vous a envoyé une demande d'ami.",
+            related_friendship=friendship
         )
-        serializer = FriendshipSerializer(friendship)
-        return Response(serializer.data, status=status.HTTP_201_CREATED)
+        return Response({"message": "Demande d'ami envoyée avec succès.", "id": friendship.id}, status=status.HTTP_201_CREATED)
 
-class FriendRequestActionView(APIView):
-    """
-    Vue API pour accepter ou rejeter une demande d'amitié.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        friendship_id = request.data.get('friendship_id')
-        action = request.data.get('action') # 'accept' or 'reject'
-
-        if not friendship_id or action not in ['accept', 'reject']:
-            return Response({"error": "Friendship ID and action ('accept' or 'reject') are required."}, status=status.HTTP_400_BAD_REQUEST)
+    @action(detail=False, methods=['post'], serializer_class=FriendshipActionSerializer)
+    def request_action(self, request):
+        """
+        Accepte ou rejette une demande d'ami.
+        """
+        serializer = self.get_serializer(data=request.data)
+        serializer.is_valid(raise_exception=True)
+        friendship_id = serializer.validated_data['friendship_id']
+        action_type = serializer.validated_data['action']
 
         friendship = get_object_or_404(Friendship, id=friendship_id)
 
+        # Seul le user2 (destinataire de la demande) peut accepter/rejeter
         if friendship.user2 != request.user:
-            return Response({"error": "You are not authorized to perform this action on this friendship request."}, status=status.HTTP_403_FORBIDDEN)
-
+            return Response({"error": "Vous n'êtes pas autorisé à effectuer cette action sur cette demande."}, status=status.HTTP_403_FORBIDDEN)
+        
         if friendship.status != 'pending':
-            return Response({"error": "Friend request is not pending."}, status=status.HTTP_400_BAD_REQUEST)
+            return Response({"error": "Cette demande n'est plus en attente."}, status=status.HTTP_400_BAD_REQUEST)
 
-        if action == 'accept':
+        if action_type == 'accept':
             friendship.status = 'accepted'
             friendship.save()
+            # Créer une notification pour l'expéditeur de la demande
             Notification.objects.create(
                 recipient=friendship.user1,
                 sender=request.user,
                 notification_type='friend_accepted',
-                content=f"{request.user.username} a accepté votre demande d'ami."
+                content=f"{request.user.username} a accepté votre demande d'ami.",
+                related_friendship=friendship
             )
-            return Response({"message": "Friend request accepted."}, status=status.HTTP_200_OK)
-        elif action == 'reject':
+            return Response({"message": "Demande d'ami acceptée."}, status=status.HTTP_200_OK)
+        elif action_type == 'reject':
             friendship.status = 'rejected'
-            friendship.save() # Ou Friendship.objects.delete(friendship) si vous voulez la supprimer
-            return Response({"message": "Friend request rejected."}, status=status.HTTP_200_OK)
+            friendship.save()
+            # Optionnel: Créer une notification pour l'expéditeur si la demande est rejetée
+            # Notification.objects.create(
+            #     recipient=friendship.user1,
+            #     sender=request.user,
+            #     notification_type='friend_rejected',
+            #     content=f"{request.user.username} a rejeté votre demande d'ami.",
+            #     related_friendship=friendship
+            # )
+            return Response({"message": "Demande d'ami rejetée."}, status=status.HTTP_200_OK)
+        
+        return Response({"error": "Action invalide."}, status=status.HTTP_400_BAD_REQUEST)
 
-class FriendsListView(ListAPIView):
+class LikeViewSet(viewsets.ModelViewSet):
     """
-    Vue API pour lister les amis acceptés de l'utilisateur authentifié.
+    API endpoint pour gérer les likes sur les rêves.
     """
-    serializer_class = UserSerializer # Utilisez le UserSerializer de l'app users pour afficher les détails des amis
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        # Récupérer les amitiés où l'utilisateur est user1 ou user2 et le statut est 'accepted'
-        friends_id = Friendship.objects.filter(
-            Q(user1=user, status='accepted') | Q(user2=user, status='accepted')
-        ).values_list('user1_id', 'user2_id')
-
-        # Extraire les IDs des amis
-        friend_ids = []
-        for u1_id, u2_id in friends_id:
-            if u1_id == user.id:
-                friend_ids.append(u2_id)
-            else:
-                friend_ids.append(u1_id)
-
-        return User.objects.filter(id__in=friend_ids)
-
-
-# --- Like Views ---
-
-class LikeToggleView(APIView):
-    """
-    Vue API pour ajouter ou retirer un like sur un rêve.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, dream_id, *args, **kwargs):
-        dream = get_object_or_404(Dream, id=dream_id)
-        user = request.user
-
-        like, created = Like.objects.get_or_create(user=user, dream=dream)
-
-        if not created:
-            # Si le like existait déjà, le supprimer (toggle off)
-            like.delete()
-            return Response({"message": "Like removed."}, status=status.HTTP_200_OK)
-        else:
-            # Si le like vient d'être créé (toggle on)
-            # Optionnel: créer une notification pour l'auteur du rêve
-            if dream.user != user:
-                Notification.objects.create(
-                    recipient=dream.user,
-                    sender=user,
-                    dream=dream,
-                    notification_type='like',
-                    content=f"{user.username} a aimé votre rêve '{dream.raw_prompt[:50]}...'"
-                )
-            return Response({"message": "Like added."}, status=status.HTTP_201_CREATED)
-
-class DreamLikesListView(ListAPIView):
-    """
-    Vue API pour lister les likes d'un rêve spécifique.
-    """
+    queryset = Like.objects.all()
     serializer_class = LikeSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        dream_id = self.kwargs['dream_id']
-        dream = get_object_or_404(Dream, id=dream_id)
-        # Assurez-vous que l'utilisateur a le droit de voir les likes du rêve (selon la visibilité du rêve)
-        # Logique simplifiée ici: l'utilisateur doit être le propriétaire du rêve ou un ami ou le rêve est public
-        if dream.visibility == 'public' or dream.user == self.request.user:
-            return Like.objects.filter(dream=dream)
-        elif dream.visibility == 'friends':
-            # Vérifiez si l'utilisateur est ami avec le propriétaire du rêve
-            is_friend = Friendship.objects.filter(
-                Q(user1=self.request.user, user2=dream.user, status='accepted') |
-                Q(user1=dream.user, user2=self.request.user, status='accepted')
-            ).exists()
-            if is_friend:
-                return Like.objects.filter(dream=dream)
-        raise ValidationError("You do not have permission to view likes for this dream.")
-
-
-# --- Comment Views ---
-
-class CommentListCreateView(ListAPIView, CreateAPIView):
-    """
-    Vue API pour lister les commentaires d'un rêve et en créer un nouveau.
-    """
-    serializer_class = CommentSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        dream_id = self.kwargs['dream_id']
-        dream = get_object_or_404(Dream, id=dream_id)
-        # Logique de permission pour voir les commentaires, similaire à DreamLikesListView
-        if dream.visibility == 'public' or dream.user == self.request.user:
-            return Comment.objects.filter(dream=dream, parent_comment__isnull=True) # Récupère seulement les commentaires de premier niveau
-        elif dream.visibility == 'friends':
-            is_friend = Friendship.objects.filter(
-                Q(user1=self.request.user, user2=dream.user, status='accepted') |
-                Q(user1=dream.user, user2=self.request.user, status='accepted')
-            ).exists()
-            if is_friend:
-                return Comment.objects.filter(dream=dream, parent_comment__isnull=True)
-        raise ValidationError("You do not have permission to view comments for this dream.")
+        """
+        Limite les likes aux likes de l'utilisateur authentifié.
+        """
+        return self.queryset.filter(user=self.request.user)
 
     def perform_create(self, serializer):
-        dream_id = self.kwargs['dream_id']
-        dream = get_object_or_404(Dream, id=dream_id)
-        user = self.request.user
+        """
+        Associe le like à l'utilisateur authentifié et crée une notification.
+        """
+        dream = serializer.validated_data['dream']
+        if Like.objects.filter(user=self.request.user, dream=dream).exists():
+            raise serializers.ValidationError("Vous avez déjà aimé ce rêve.")
         
-        # Vérifiez la visibilité du rêve avant de permettre le commentaire
-        if dream.visibility == 'private' and dream.user != user:
-            raise ValidationError("You cannot comment on a private dream unless you are the owner.")
-        if dream.visibility == 'friends':
-            is_friend = Friendship.objects.filter(
-                Q(user1=user, user2=dream.user, status='accepted') |
-                Q(user1=dream.user, user2=user, status='accepted')
-            ).exists()
-            if not is_friend and dream.user != user:
-                raise ValidationError("You can only comment on a friend's dream if you are friends.")
-
-        comment = serializer.save(user=user, dream=dream)
-
+        like = serializer.save(user=self.request.user)
         # Créer une notification pour l'auteur du rêve
-        if dream.user != user:
+        if dream.user != self.request.user: # Ne pas notifier si l'utilisateur aime son propre rêve
             Notification.objects.create(
                 recipient=dream.user,
-                sender=user,
-                dream=dream,
-                notification_type='comment',
-                content=f"{user.username} a commenté votre rêve '{dream.raw_prompt[:50]}...': \"{comment.content[:50]}...\""
-            )
-        # Si c'est une réponse à un autre commentaire, notifier l'auteur du commentaire parent
-        if comment.parent_comment and comment.parent_comment.user != user:
-             Notification.objects.create(
-                recipient=comment.parent_comment.user,
-                sender=user,
-                dream=dream, # Le rêve est toujours lié au commentaire principal
-                notification_type='comment',
-                content=f"{user.username} a répondu à votre commentaire sur le rêve '{dream.raw_prompt[:50]}...': \"{comment.content[:50]}...\""
+                sender=self.request.user,
+                notification_type='dream_liked',
+                content=f"{self.request.user.username} a aimé votre rêve.",
+                related_dream=dream
             )
 
-class CommentDetailView(RetrieveUpdateDestroyAPIView):
+    @action(detail=True, methods=['post'], url_path='unlike')
+    def unlike(self, request, pk=None):
+        """
+        Permet de 'disliker' un rêve (supprimer le like).
+        """
+        try:
+            like = Like.objects.get(pk=pk, user=request.user)
+            like.delete()
+            return Response(status=status.HTTP_204_NO_CONTENT)
+        except Like.DoesNotExist:
+            return Response({"error": "Like non trouvé ou non autorisé."}, status=status.HTTP_404_NOT_FOUND)
+
+class CommentViewSet(viewsets.ModelViewSet):
     """
-    Vue API pour récupérer, mettre à jour ou supprimer un commentaire spécifique.
-    Seul l'auteur du commentaire peut le modifier/supprimer.
+    API endpoint pour gérer les commentaires sur les rêves.
     """
     queryset = Comment.objects.all()
     serializer_class = CommentSerializer
     permission_classes = [IsAuthenticated]
 
     def get_queryset(self):
-        """Assure que l'utilisateur ne peut accéder qu'à ses propres commentaires ou aux commentaires qu'il a le droit de voir."""
-        # Pour récupérer, on peut voir tous les commentaires d'un rêve visible
-        # Pour update/destroy, l'utilisateur doit être l'auteur
-        qs = super().get_queryset()
-        if self.request.method in ['PUT', 'PATCH', 'DELETE']:
-            return qs.filter(user=self.request.user)
-        return qs # Pour GET, la permission sera gérée par Dream visiblity, mais ici on ne filtre pas par user
+        """
+        Limite les commentaires aux commentaires de l'utilisateur authentifié,
+        ou aux commentaires sur les rêves publics/amis.
+        """
+        # Pour récupérer les commentaires d'un rêve spécifique
+        dream_id = self.request.query_params.get('dream_id')
+        if dream_id:
+            # Assurez-vous que l'utilisateur a le droit de voir le rêve avant de voir ses commentaires
+            dream = get_object_or_404(Dream, id=dream_id)
+            if dream.visibility == 'public':
+                return Comment.objects.filter(dream=dream)
+            elif dream.visibility == 'friends':
+                # Logique pour vérifier si l'utilisateur est ami avec l'auteur du rêve
+                from apps.interactions.models import Friendship # Local import
+                if not (Friendship.objects.filter(
+                    Q(user1=self.request.user, user2=dream.user, status='accepted') |
+                    Q(user1=dream.user, user2=self.request.user, status='accepted')
+                ).exists() or dream.user == self.request.user):
+                    return Comment.objects.none() # Pas autorisé
+                return Comment.objects.filter(dream=dream)
+            elif dream.visibility == 'private' and dream.user != self.request.user:
+                return Comment.objects.none() # Pas autorisé
+            return Comment.objects.filter(dream=dream)
+        
+        # Si pas de dream_id, retourner les commentaires de l'utilisateur actuel
+        return self.queryset.filter(user=self.request.user)
 
-    def perform_update(self, serializer):
-        # Assurez-vous que seul l'auteur peut modifier le commentaire
-        if serializer.instance.user != self.request.user:
-            raise ValidationError("You do not have permission to update this comment.")
-        serializer.save()
 
-    def perform_destroy(self, instance):
-        # Assurez-vous que seul l'auteur peut supprimer le commentaire
-        if instance.user != self.request.user:
-            raise ValidationError("You do not have permission to delete this comment.")
-        instance.delete()
+    def perform_create(self, serializer):
+        """
+        Associe le commentaire à l'utilisateur authentifié et crée une notification.
+        """
+        comment = serializer.save(user=self.request.user)
+        # Créer une notification pour l'auteur du rêve
+        if comment.dream.user != self.request.user: # Ne pas notifier si l'utilisateur commente son propre rêve
+            Notification.objects.create(
+                recipient=comment.dream.user,
+                sender=self.request.user,
+                notification_type='dream_commented',
+                content=f"{self.request.user.username} a commenté votre rêve: '{comment.content[:50]}...'",
+                related_dream=comment.dream
+            )
 
-
-# --- Notification Views ---
-
-class NotificationListView(ListAPIView):
+class NotificationViewSet(viewsets.ModelViewSet):
     """
-    Vue API pour lister les notifications de l'utilisateur authentifié.
-    Permet de filtrer par 'read' et de marquer comme lu.
+    API endpoint pour gérer les notifications de l'utilisateur.
     """
+    queryset = Notification.objects.all()
     serializer_class = NotificationSerializer
     permission_classes = [IsAuthenticated]
+    http_method_names = ['get', 'post'] # Autoriser GET (list/retrieve) et POST (actions comme marquer lu)
 
     def get_queryset(self):
-        user = self.request.user
-        queryset = Notification.objects.filter(recipient=user)
+        """
+        Limite les notifications aux notifications du destinataire authentifié.
+        """
+        # Permettre de filtrer par type de notification ou par statut de lecture
+        queryset = self.queryset.filter(recipient=self.request.user)
+        is_read = self.request.query_params.get('is_read', None)
+        notification_type = self.request.query_params.get('notification_type', None)
 
-        # Filtrer par statut lu/non lu
-        is_read_param = self.request.query_params.get('is_read', None)
-        if is_read_param is not None:
-            if is_read_param.lower() == 'true':
-                queryset = queryset.filter(is_read=True)
-            elif is_read_param.lower() == 'false':
-                queryset = queryset.filter(is_read=False)
+        if is_read is not None:
+            is_read_bool = is_read.lower() in ['true', '1']
+            queryset = queryset.filter(is_read=is_read_bool)
+        
+        if notification_type:
+            queryset = queryset.filter(notification_type=notification_type)
 
         return queryset.order_by('-created_at')
 
-class NotificationMarkAsReadView(APIView):
-    """
-    Vue API pour marquer une notification spécifique comme lue.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, pk, *args, **kwargs):
+    @action(detail=True, methods=['post'])
+    def read(self, request, pk=None):
+        """
+        Marque une notification spécifique comme lue.
+        """
         notification = get_object_or_404(Notification, pk=pk, recipient=request.user)
         notification.is_read = True
         notification.save()
-        serializer = NotificationSerializer(notification)
+        serializer = self.get_serializer(notification)
         return Response(serializer.data, status=status.HTTP_200_OK)
 
-class NotificationMarkAllAsReadView(APIView):
-    """
-    Vue API pour marquer toutes les notifications non lues de l'utilisateur comme lues.
-    """
-    permission_classes = [IsAuthenticated]
-
-    def post(self, request, *args, **kwargs):
-        count = Notification.objects.filter(recipient=request.user, is_read=False).update(is_read=True)
+    @action(detail=False, methods=['post'], url_path='read-all')
+    def read_all(self, request):
+        """
+        Marque toutes les notifications de l'utilisateur comme lues.
+        """
+        notifications = Notification.objects.filter(recipient=request.user, is_read=False)
+        count = notifications.update(is_read=True)
         return Response({"message": f"{count} notifications marquées comme lues."}, status=status.HTTP_200_OK)
-
-
-# --- Feed View ---
-
-class DreamFeedView(ListAPIView):
-    """
-    Vue API pour le fil d'actualité des rêves.
-    Affiche les rêves publics, et les rêves des amis de l'utilisateur.
-    """
-    serializer_class = DreamSerializer
-    permission_classes = [IsAuthenticated]
-
-    def get_queryset(self):
-        user = self.request.user
-        
-        # Rêves publics de tous les utilisateurs
-        public_dreams = Dream.objects.filter(visibility='public')
-
-        # Rêves des amis de l'utilisateur
-        # Trouvez tous les IDs des amis de l'utilisateur actuel
-        friend_ids = Friendship.objects.filter(
-            Q(user1=user, status='accepted') | Q(user2=user, status='accepted')
-        ).values_list('user1', 'user2')
-
-        friends_of_user_ids = []
-        for u1_id, u2_id in friend_ids:
-            if u1_id == user.id:
-                friends_of_user_ids.append(u2_id)
-            else:
-                friends_of_user_ids.append(u1_id)
-        
-        # Inclure les rêves de l'utilisateur lui-même (sauf s'ils sont privés)
-        my_non_private_dreams = Dream.objects.filter(user=user).exclude(visibility='private')
-
-        # Rêves partagés avec les amis (si l'utilisateur est ami avec le propriétaire du rêve)
-        friends_dreams = Dream.objects.filter(
-            user__id__in=friends_of_user_ids,
-            visibility='friends'
-        )
-
-        # Rêves appartenant à l'utilisateur lui-même, s'ils ne sont pas privés
-        user_own_dreams = Dream.objects.filter(user=user).exclude(visibility='private')
-
-        # Combiner les querysets (distinct pour éviter les doublons)
-        # Utiliser F() pour ordonner en fonction de l'utilisateur pour le fil d'actualité
-        # Ou simplement ordonner par timestamp globalement
-        combined_queryset = (
-            public_dreams |
-            friends_dreams |
-            user_own_dreams
-        ).distinct().order_by('-timestamp')
-
-        return combined_queryset

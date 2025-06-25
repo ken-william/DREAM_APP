@@ -1,3 +1,4 @@
+# dream_synth_project/settings.py
 """
 Django settings for dream_synth_project project.
 
@@ -48,10 +49,10 @@ INSTALLED_APPS = [
     'rest_framework_simplejwt',
     'corsheaders',
     # Your apps
-    'apps.users', # Our custom user app
-    'apps.dreams', # Will be added later
-    'apps.interactions', # Will be added later
-    'apps.core', # For common utilities
+    'apps.users',
+    'apps.dreams', # Décommenté
+    'apps.interactions', # Décommenté
+    'apps.core',
 ]
 
 MIDDLEWARE = [
@@ -190,8 +191,22 @@ SIMPLE_JWT = {
 # CORS Headers Settings (for development)
 # In production, restrict CORS_ALLOWED_ORIGINS to your frontend's actual domain
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000", # Default React development server port
+    "http://localhost:3000",
     "http://127.0.0.1:3000",
+    "http://localhost:5173", # Ajoutez si Vite utilise 5173
+    "http://127.0.0.1:5173",
+    "http://localhost:5174", # Port par défaut de Vite que vous utilisez
+    "http://127.0.0.1:5174",
+    "http://localhost:5175", # Pour couvrir une plage de ports si Vite change
+    "http://127.0.0.1:5175",
+    "http://localhost:5176",
+    "http://127.0.0.1:5176",
+    "http://localhost:5177",
+    "http://127.0.0.1:5177",
+    "http://localhost:5178",
+    "http://127.0.0.1:5178",
+    "http://localhost:5179",
+    "http://127.0.0.1:5179",
 ]
 CORS_ALLOW_CREDENTIALS = True # Allow cookies to be sent cross-origin
 

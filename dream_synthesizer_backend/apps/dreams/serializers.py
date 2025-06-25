@@ -1,13 +1,14 @@
+# apps/dreams/serializers.py
 from rest_framework import serializers
 from .models import Dream
 
 class DreamSerializer(serializers.ModelSerializer):
     """
-    Sérialiseur pour le modèle Dream.
+    Serializer for the Dream model.
     """
-    # L'utilisateur est en lecture seule et sera défini automatiquement par la vue
+    # The user is read-only and will be automatically set by the view
     user = serializers.ReadOnlyField(source='user.username')
-    # Pour afficher l'ID de l'utilisateur qui est lié au rêve
+    # To display the ID of the user linked to the dream
     user_id = serializers.ReadOnlyField(source='user.id')
 
     class Meta:
@@ -16,5 +17,6 @@ class DreamSerializer(serializers.ModelSerializer):
             'id', 'user', 'user_id', 'timestamp', 'raw_prompt', 'image_path',
             'emotion_analysis', 'visibility'
         )
-        read_only_fields = ('id', 'user', 'user_id', 'timestamp', 'image_path', 'emotion_analysis')
-        # raw_prompt et visibility peuvent être modifiés par l'utilisateur
+        # REMOVED 'image_path' and 'emotion_analysis' from read_only_fields
+        read_only_fields = ('id', 'user', 'user_id', 'timestamp')
+        # raw_prompt and visibility can be modified by the user

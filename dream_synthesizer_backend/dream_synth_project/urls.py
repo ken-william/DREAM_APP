@@ -1,8 +1,9 @@
+# dream_synth_project/urls.py
 """
 dream_synth_project URL Configuration
 
 The `urlpatterns` list routes URLs to views. For more information please see:
-    [https://docs.djangoproject.com/en/5.0/topics/http/urls/](https://docs.djangoproject.com/en/5.0/topics/http/urls/)
+    https://docs.djangoproject.com/en/5.0/topics/http/urls/
 Examples:
 Function views
     1. Add an import:  from my_app import views
@@ -29,8 +30,9 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     # API endpoints
     path('api/', include('apps.users.urls')), # User and profile related endpoints
-    path('api/', include('apps.dreams.urls')), # Dream related endpoints
-    path('api/', include('apps.interactions.urls')), # Social interactions
+    path('api/', include('apps.dreams.urls')), # <--- C'EST LA LIGNE CLÉ À VÉRIFIER
+    path('api/', include('apps.interactions.urls')), # <--- C'EST LA LIGNE CLÉ À VÉRIFIER
+    path('api/', include('apps.core.urls')), # Pour common utilities (simple endpoint test)
 
     # JWT Authentication endpoints
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),

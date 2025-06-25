@@ -1,22 +1,24 @@
+# apps/dreams/admin.py
 from django.contrib import admin
 from .models import Dream
 
 @admin.register(Dream)
 class DreamAdmin(admin.ModelAdmin):
     """
-    Personnalise l'affichage du modèle Dream dans l'interface d'administration.
+    Personnalisation de l'interface d'administration pour le modèle Dream.
     """
-    list_display = ('user', 'timestamp', 'raw_prompt', 'image_path', 'visibility')
-    list_filter = ('visibility', 'user', 'timestamp')
-    search_fields = ('raw_prompt', 'user__username')
-    date_hierarchy = 'timestamp'
-    readonly_fields = ('timestamp', 'image_path', 'emotion_analysis') # Ces champs sont générés ou ne sont pas modifiables directement
-    fieldsets = (
-        (None, {
-            'fields': ('user', 'raw_prompt', 'visibility')
-        }),
-        ('Détails Générés', {
-            'fields': ('image_path', 'emotion_analysis', 'timestamp'),
-            'classes': ('collapse',) # Permet de masquer/afficher cette section
-        }),
-    )
+    list_display = ('user', 'timestamp', 'raw_prompt', 'visibility', 'image_path_exists', 'emotion_analysis_exists')
+    list_filter = ('visibility', 'timestamp', 'user')
+    search_fields = ('user__username', 'raw_prompt')
+    raw_id_fields = ('user',) # Permet une recherche plus facile des utilisateurs
+    readonly_fields = ('timestamp',) # Le timestamp est auto-généré
+
+    def image_path_exists(self, obj):
+        return bool(obj.image_path)
+    image_path_exists.boolean = True
+    image_path_exists.short_description = "Image générée ?"
+
+    def emotion_analysis_exists(self, obj):
+        return bool(obj.emotion_analysis)
+    emotion_analysis_exists.boolean = True
+    emotion_analysis_exists.short_description = "Analyse émotionnelle ?"

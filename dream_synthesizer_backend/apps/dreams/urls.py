@@ -1,24 +1,12 @@
-from django.urls import path
-from .views import (
-    DreamListCreateView,
-    DreamDetailView,
-    AudioTranscriptionView,
-    ImageGenerationView,
-    EmotionAnalysisView,
-    ChatWithMistralView
-)
+# apps/dreams/urls.py
+from django.urls import path, include
+from rest_framework.routers import DefaultRouter
+from .views import DreamViewSet, FeedView
+
+router = DefaultRouter()
+router.register(r'dreams', DreamViewSet) # Pour /api/dreams/ (list, create, retrieve, update, delete)
 
 urlpatterns = [
-    # API pour lister et créer les rêves de l'utilisateur
-    path('dreams/', DreamListCreateView.as_view(), name='dream_list_create'),
-    # API pour récupérer, mettre à jour et supprimer un rêve spécifique
-    path('dreams/<int:pk>/', DreamDetailView.as_view(), name='dream_detail'),
-    # API pour la transcription audio
-    path('transcribe-audio/', AudioTranscriptionView.as_view(), name='transcribe_audio'),
-    # API pour la génération d'image
-    path('generate-image/', ImageGenerationView.as_view(), name='generate_image'),
-    # API pour l'analyse émotionnelle
-    path('analyze-emotion/', EmotionAnalysisView.as_view(), name='analyze_emotion'),
-    # API pour le chat avec Mistral
-    path('chat-dream/', ChatWithMistralView.as_view(), name='chat_dream'),
+    path('', include(router.urls)),
+    path('feed/', FeedView.as_view({'get': 'list'}), name='feed'), # Pour le fil d'actualité
 ]

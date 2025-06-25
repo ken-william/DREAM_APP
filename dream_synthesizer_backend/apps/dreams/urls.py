@@ -1,12 +1,16 @@
 # apps/dreams/urls.py
 from django.urls import path, include
 from rest_framework.routers import DefaultRouter
-from .views import DreamViewSet, FeedView
+from .views import DreamViewSet # Importez le DreamViewSet
 
+# Créez un routeur par défaut
 router = DefaultRouter()
-router.register(r'dreams', DreamViewSet) # Pour /api/dreams/ (list, create, retrieve, update, delete)
+# Enregistrez le DreamViewSet avec le préfixe 'dreams'
+# Cela va générer automatiquement les URLs pour les méthodes CRUD et les @action
+# Par exemple: /dreams/, /dreams/{pk}/, /dreams/transcribe-audio/, etc.
+router.register(r'dreams', DreamViewSet, basename='dream')
 
 urlpatterns = [
+    # Inclut toutes les URLs générées par le routeur
     path('', include(router.urls)),
-    path('feed/', FeedView.as_view({'get': 'list'}), name='feed'), # Pour le fil d'actualité
 ]

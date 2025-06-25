@@ -5,12 +5,12 @@ import FeedDreamCard from '../dreams/FeedDreamCard'; // Assurez-vous du chemin c
 const FeedPage = ({
   setCurrentPage,
   feedDreams, feedLoading, feedError, fetchFeedDreams,
-  onLike, onComment
+  onLike, onComment // Ces fonctions sont passées depuis App.jsx pour interagir avec le backend
 }) => {
   // Récupère le fil d'actualité au montage du composant
   useEffect(() => {
-    fetchFeedDreams();
-  }, [fetchFeedDreams]);
+    fetchFeedDreams(); // Appel de la fonction de récupération des données du backend
+  }, [fetchFeedDreams]); // Dépendance à fetchFeedDreams pour s'assurer qu'elle est appelée lorsque nécessaire
 
   return (
     <div className="flex flex-col items-center min-h-[calc(100vh-64px)] bg-gray-50 p-4 w-full">
@@ -28,8 +28,8 @@ const FeedPage = ({
             <FeedDreamCard
               key={dream.id}
               dream={dream}
-              onLike={onLike}
-              onComment={onComment}
+              onLike={onLike} // Passe la fonction de like au composant enfant
+              onComment={onComment} // Passe la fonction de commentaire au composant enfant
             />
           ))}
         </div>

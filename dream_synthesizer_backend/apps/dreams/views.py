@@ -13,10 +13,7 @@ import uuid # For unique file names
 from django.conf import settings # To access MEDIA_ROOT and MEDIA_URL
 
 # Specific imports for Mistral Agents and client
-from mistralai.client import MistralClient
-from mistralai.models import ToolFileChunk
-# MistralAIAPIError import removed as requested
-
+# from mistralai.models import ToolFileChunk # COMMENTÉ: Cet import n'est plus nécessaire pour la nouvelle logique d'extraction
 
 from .models import Dream
 from .serializers import DreamSerializer
@@ -48,8 +45,6 @@ class DreamViewSet(viewsets.ModelViewSet):
         
         try:
             groq_client = get_groq_client()
-            # La méthode create du client Groq s'attend à un tuple (nom_du_fichier, contenu_binaire)
-            # ou un objet de fichier qui se comporte comme un fichier Python
             transcription = groq_client.audio.transcriptions.create(
                 file=("dream_audio.webm", audio_file.read()),
                 model="whisper-large-v3-turbo" # Using the same model name as your backend.py
@@ -57,8 +52,7 @@ class DreamViewSet(viewsets.ModelViewSet):
             return Response({"transcription": transcription.text}, status=status.HTTP_200_OK)
         except Exception as e:
             logger.exception("Error during audio transcription with Groq:")
-            # Ensure the error message is well-formatted for the frontend
-            return Response({"error": f"Transcription error: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Transcription error: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], url_path='generate-image')
     def generate_image(self, request):
@@ -70,11 +64,14 @@ class DreamViewSet(viewsets.ModelViewSet):
         if not mistral_api_key:
             return Response({"error": "MISTRAL_API_KEY not found in environment variables."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
-        try:
-            client_mistralai = get_mistral_client()
+        image_agent = None # Initialiser image_agent à None
+        image_file_url = None # Initialiser image_file_url à None
 
-            # 1. Reformulate the prompt
-            reform_response = client_mistralai.chat.completions.create(
+        try:
+            client_mistralai = get_mistral_client() # Using the configured Mistral client
+
+            # 1. Reformulate the prompt for image generation (as in backend.py)
+            reform_response = client_mistralai.chat.complete(
                 model="mistral-small-latest",
                 messages=[
                     {"role": "system", "content": "You are an assistant who reformulates dream narratives into short, creative, and clear image prompts, optimized for visual generation. Use descriptive keywords and evocative adjectives, inspired by conceptual art, with a cinematic ambiance. Focus on the essential for an impactful prompt."},
@@ -85,8 +82,9 @@ class DreamViewSet(viewsets.ModelViewSet):
             logger.info(f"Image prompt reformulated by Mistral: {image_prompt}")
 
             # 2. Create a Mistral image generation agent
+            # Note: Creating agents for each request can be costly/slow. In production, agent persistence would be managed.
             image_agent = client_mistralai.beta.agents.create(
-                model="mistral-small-latest",
+                model="mistral-large-latest", # <--- CHANGEMENT ICI: Utilisation de mistral-large-latest
                 name="Image Generator",
                 description="Generates images from a prompt.",
                 instructions="Use the image_generation tool to create realistic images.",
@@ -95,44 +93,64 @@ class DreamViewSet(viewsets.ModelViewSet):
             )
             logger.info(f"Mistral agent created with ID: {image_agent.id}")
 
-            # 3. Start a conversation with the agent
+            # 3. Start a conversation with the agent to generate the image
+            # Using stream=False as in backend.py to get a direct response
             conversation_response = client_mistralai.beta.conversations.start(
                 agent_id=image_agent.id,
-                inputs=f"Generate a realistic image based on this dream: {image_prompt}",
+                inputs=f"Generate a realistic image based on this dream: {image_prompt}", # Prompt passed to the agent
                 stream=False,
             )
             logger.info(f"Agent conversation response: {conversation_response}")
 
-            image_file_url = None
+            # CHANGEMENT MAJEUR ICI : Correctement extraire le fichier de la réponse de l'agent
+            # Look for the generated image file in the conversation response outputs
             for output in conversation_response.outputs:
-                if isinstance(output, ToolFileChunk):
-                    file_data = client_mistralai.files.download(file_id=output.file_id).read()
-                    
-                    media_dir = os.path.join(settings.MEDIA_ROOT, 'generated_images')
-                    os.makedirs(media_dir, exist_ok=True)
+                # Vérifiez si l'objet de sortie est de type 'tool_output' ET qu'il a des fichiers directement attachés
+                if output.type == "tool_output" and hasattr(output, 'files') and output.files:
+                    for file_item in output.files: # Itérer directement sur les fichiers de l'objet output
+                        # file_item est un File object (from mistralai.models.agents.beta)
+                        # Download the binary image file content using file_id
+                        file_data = client_mistralai.files.download(file_id=file_item.file_id).read()
 
-                    unique_filename = f"image_{uuid.uuid4().hex}.{output.file_type}"
-                    full_file_path = os.path.join(media_dir, unique_filename)
+                        # Define the save directory within MEDIA_ROOT
+                        media_dir = os.path.join(settings.MEDIA_ROOT, 'generated_images')
+                        os.makedirs(media_dir, exist_ok=True) # Create the folder if it doesn't exist
 
-                    with open(full_file_path, "wb") as f:
-                        f.write(file_data)
-                    
-                    image_file_url = os.path.join(settings.MEDIA_URL, 'generated_images', unique_filename)
-                    logger.info(f"Image saved locally: {full_file_path}, URL: {image_file_url}")
-                    break
+                        # Generate a unique filename and save the image
+                        # Use file_item.type for the extension (e.g., 'image/jpeg' -> 'jpeg')
+                        extension = file_item.type.split('/')[-1] if '/' in file_item.type else 'png' # Default to png
+                        unique_filename = f"image_{uuid.uuid4().hex}.{extension}"
+                        full_file_path = os.path.join(media_dir, unique_filename)
+
+                        with open(full_file_path, "wb") as f:
+                            f.write(file_data)
+                        
+                        # Construct the image URL for the frontend
+                        image_file_url = os.path.join(settings.MEDIA_URL, 'generated_images', unique_filename).replace(os.sep, '/')
+                        logger.info(f"Image saved locally: {full_file_path}, URL: {image_file_url}")
+                        break # Image found and saved, exit this inner loop
+                if image_file_url: break # Exit the main outputs loop if image is found
             
-            # Delete the agent after use
-            client_mistralai.beta.agents.delete(agent_id=image_agent.id)
-            logger.info(f"Mistral agent {image_agent.id} deleted.")
-
-            if image_file_url:
-                return Response({"image_url": image_file_url}, status=status.HTTP_200_OK)
-            else:
-                return Response({"error": "No image generated or found by Mistral. Check Mistral agent logs. The prompt might have been too abstract or the tool couldn't generate the image."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
-
-        except Exception as e: # Changed from MistralAIAPIError
+        except Exception as e:
             logger.exception("Error during image generation with Mistral:")
-            return Response({"error": f"Error generating image: {str(e)}. Check MISTRAL_API_KEY and API limits."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error during image generation: {e}. Check MISTRAL_API_KEY and agent permissions."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+        finally:
+            # Always attempt to delete the agent (commented for debugging as requested)
+            if image_agent and hasattr(image_agent, 'id'): # Ensure the agent was created and has an ID
+                try:
+                    # COMMENTÉ POUR LE DÉBOGAGE : client_mistralai.beta.agents.delete(agent_id=image_agent.id)
+                    logger.info(f"Suppression de l'agent {image_agent.id} commentée pour débogage.")
+                except AttributeError as ae:
+                    logger.error(f"AttributeError during agent deletion: {ae}. "
+                                 f"Please check that your 'mistralai' library is up to date (pip install --upgrade mistralai).")
+                except Exception as delete_e:
+                    logger.error(f"Unexpected error during agent deletion {image_agent.id} : {delete_e}")
+
+        if image_file_url:
+            return Response({"image_url": image_file_url}, status=status.HTTP_200_OK)
+        else:
+            logger.warning("No image generated or found by Mistral. Check agent logs. The prompt might have been too abstract or the tool couldn't generate the image.")
+            return Response({"error": "No image could be generated. Try again with a more precise prompt."}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], url_path='analyze-emotion')
     def analyze_emotion(self, request):
@@ -142,7 +160,7 @@ class DreamViewSet(viewsets.ModelViewSet):
         
         try:
             mistral_client = get_mistral_client()
-            emotion_response = mistral_client.chat.completions.create(
+            emotion_response = mistral_client.chat.complete(
                 model="mistral-small-latest",
                 messages=[
                     {"role": "system", "content": (
@@ -164,13 +182,13 @@ class DreamViewSet(viewsets.ModelViewSet):
                 emotion: max(0.0, min(10.0, float(received_emotions.get(emotion, 0))))
                 for emotion in expected_emotions_backend
             }
-
+            
             final_emotion_scores = {k: v / 10.0 for k, v in validated_analysis.items()}
 
             return Response({"emotion_analysis": final_emotion_scores}, status=status.HTTP_200_OK)
-        except Exception as e: # Changed from MistralAIAPIError
+        except Exception as e:
             logger.exception("Error during emotion analysis with Mistral:")
-            return Response({"error": f"Error analyzing emotions: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error during emotion analysis: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     @action(detail=False, methods=['post'], url_path='chat-dream')
     def chat_dream(self, request):
@@ -194,7 +212,7 @@ class DreamViewSet(viewsets.ModelViewSet):
             
             messages.append({"role": "user", "content": user_question})
 
-            response = mistral_client.chat.completions.create(
+            response = mistral_client.chat.complete(
                 model="mistral-large-latest",
                 messages=messages,
                 temperature=0.7,
@@ -204,9 +222,9 @@ class DreamViewSet(viewsets.ModelViewSet):
             ai_response = response.choices[0].message.content
             return Response({"ai_response": ai_response}, status=status.HTTP_200_OK)
 
-        except Exception as e: # Changed from MistralAIAPIError
+        except Exception as e:
             logger.exception("Error during AI chat (Mistral):")
-            return Response({"error": f"Error during AI chat: {str(e)}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+            return Response({"error": f"Error during AI chat: {e}"}, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
 class FeedView(viewsets.ReadOnlyModelViewSet):
     queryset = Dream.objects.all()

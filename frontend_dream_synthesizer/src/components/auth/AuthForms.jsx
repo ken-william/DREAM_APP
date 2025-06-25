@@ -9,12 +9,13 @@ const AuthForms = ({
   password2, setPassword2,
   handleLogin, handleRegister,
   setCurrentPage,
-  message
+  message // Le message global passé depuis App.jsx
 }) => (
   <div className="flex items-center justify-center min-h-[calc(100vh-64px)] bg-gray-50 p-4 w-full">
     {formType === 'login' ? (
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-200">
         <h2 className="text-3xl font-bold text-center text-indigo-700 mb-6">Connexion</h2>
+        {/* Affichage du message global. Les styles sont dynamiques selon le contenu du message. */}
         {message && <p className={`mb-4 text-center ${message.includes('Erreur') ? 'text-red-600' : 'text-green-600'}`}>{message}</p>}
         <form onSubmit={handleLogin} className="space-y-4">
           <div>
@@ -34,6 +35,7 @@ const AuthForms = ({
     ) : (
       <div className="bg-white p-8 rounded-lg shadow-xl w-full max-w-md border border-gray-200">
         <h2 className="text-3xl font-bold text-center text-indigo-700 mb-6">Inscription</h2>
+        {/* Affichage du message global pour le formulaire d'inscription également. */}
         {message && <p className={`mb-4 text-center ${message.includes('Erreur') ? 'text-red-600' : 'text-green-600'}`}>{message}</p>}
         <form onSubmit={handleRegister} className="space-y-4">
           <div>

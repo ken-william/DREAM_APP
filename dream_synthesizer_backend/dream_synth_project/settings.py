@@ -12,6 +12,7 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
+import sys # <-- NOUVEAU: Importez sys
 from pathlib import Path
 from datetime import timedelta
 import dotenv
@@ -21,6 +22,10 @@ dotenv.load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
+
+# NOUVEAU: Ajoutez le répertoire 'apps' au PYTHONPATH
+# Cela permet à Django de trouver 'apps.dreams', 'apps.users', etc.
+sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 
 # Quick-start development settings - unsuitable for production
@@ -50,8 +55,8 @@ INSTALLED_APPS = [
     'corsheaders',
     # Your apps
     'apps.users',
-    'apps.dreams', # Décommenté
-    'apps.interactions', # Décommenté
+    'apps.dreams',
+    'apps.interactions',
     'apps.core',
 ]
 

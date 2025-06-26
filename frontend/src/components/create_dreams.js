@@ -41,5 +41,6 @@
       }
     });
   </script>
+<li><a href="{% url 'home' %}">Accueil</a></li>
 </body>
 </html>

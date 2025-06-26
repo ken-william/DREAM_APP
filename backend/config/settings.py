@@ -11,9 +11,11 @@ https://docs.djangoproject.com/en/5.2/ref/settings/
 """
 
 from pathlib import Path
+import os
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
-BASE_DIR = Path(__file__).resolve().parent.parent
+BASE_DIR = Path(__file__).resolve().parent.parent.parent
+
 
 
 # Quick-start development settings - unsuitable for production
@@ -39,6 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.staticfiles',
     'users.apps.UsersConfig',
     'dreams.apps.DreamsConfig',
+    'social.apps.SocialConfig',
     'rest_framework',
     'corsheaders',
     'rest_framework.authtoken'
@@ -60,7 +63,7 @@ ROOT_URLCONF = 'config.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
+        'DIRS': [os.path.join(BASE_DIR, 'frontend')],
         'APP_DIRS': True,
         'OPTIONS': {
             'context_processors': [
@@ -129,8 +132,20 @@ DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:8000",
-    "http://localhost:8001",  # ou port du serveur local où tu ouvres index.html
+    "http://localhost:8001",
+    "http://localhost:3000",
+      # ou port du serveur local où tu ouvres index.html
 ]
+
+CSRF_TRUSTED_ORIGINS = [
+    "http://localhost:3000",
+]
+
+CORS_ALLOW_CREDENTIALS = True
+CSRF_COOKIE_NAME = "csrftoken"
+CSRF_COOKIE_HTTPONLY = False  
+CSRF_COOKIE_SAMESITE = "Lax" 
+
 
 REST_FRAMEWORK = {
     'DEFAULT_AUTHENTICATION_CLASSES': [

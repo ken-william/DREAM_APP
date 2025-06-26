@@ -17,9 +17,13 @@ Including another URLconf
 from django.contrib import admin
 from dreams.views import DreamCreateAPIView
 from django.urls import path, include
+from dreams.views import home_page
+from users.views import logout_view
 
 urlpatterns = [
     path('admin/', admin.site.urls),
-    path("dreams/", include("dreams.urls")),
-    
+    path('api/dreams/', include('dreams.urls')),
+    path('api/social/', include('social.urls')), 
+    path('api/users/', include('users.urls')),
+    path('api/users/logout/', logout_view, name='logout'),
 ]

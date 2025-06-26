@@ -5,9 +5,16 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import Dream
 from .serializers import DreamSerializer
+from django.shortcuts import render
 
 from rest_framework.parsers import MultiPartParser, FormParser
 from .utils import transcribe_audio
+
+def home_page(request):
+    return render(request, "home.html")
+
+def create_dream_page(request):
+    return render(request, "create_dreams.html")
 class DreamCreateAPIView(APIView):
     def get(self, request):
         return Response({"message": "Utilise POST pour créer un rêve."})

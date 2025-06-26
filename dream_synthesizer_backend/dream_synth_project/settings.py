@@ -12,19 +12,21 @@ https://docs.djangoproject.com/en/5.0/ref/settings/
 """
 
 import os
-import sys # <-- NOUVEAU: Importez sys
+import sys
 from pathlib import Path
 from datetime import timedelta
 import dotenv
 
 # Load environment variables from .env file
+# Assurez-vous que le fichier .env est à la racine du projet (au même niveau que manage.py)
 dotenv.load_dotenv()
 
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# NOUVEAU: Ajoutez le répertoire 'apps' au PYTHONPATH
+# Ajoutez le répertoire 'apps' au PYTHONPATH
 # Cela permet à Django de trouver 'apps.dreams', 'apps.users', etc.
+# C'est une excellente pratique pour la modularité.
 sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 
 
@@ -32,12 +34,19 @@ sys.path.insert(0, os.path.join(BASE_DIR, 'apps'))
 # See https://docs.djangoproject.com/en/5.0/howto/deployment/checklist/
 
 # SECURITY WARNING: keep the secret key used in production secret!
-SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-django-insecure-secret-key-for-dev') # Use an environment variable for secret key
+# Il est crucial de définir DJANGO_SECRET_KEY dans votre environnement de production.
+# La valeur par défaut est uniquement pour le développement local.
+SECRET_KEY = os.getenv('DJANGO_SECRET_KEY', 'default-django-insecure-secret-key-for-dev')
 
 # SECURITY WARNING: don't run with debug turned on in production!
+# DEBUG doit être False en production pour des raisons de sécurité et de performance.
 DEBUG = os.getenv('DJANGO_DEBUG', 'True').lower() == 'true'
 
-ALLOWED_HOSTS = ['*'] # Allow all hosts for development, restrict in production
+# ALLOWED_HOSTS en production doit lister explicitement les noms de domaine et adresses IP
+# qui serviront votre application. ['*'] est OK pour le dev.
+ALLOWED_HOSTS = os.getenv('DJANGO_ALLOWED_HOSTS', '*').split(',')
+if DEBUG:
+    ALLOWED_HOSTS = ['*'] # En mode debug, on peut être plus permissif
 
 
 # Application definition
@@ -63,7 +72,7 @@ INSTALLED_APPS = [
 MIDDLEWARE = [
     'django.middleware.security.SecurityMiddleware',
     'django.contrib.sessions.middleware.SessionMiddleware',
-    'corsheaders.middleware.CorsMiddleware', # Must be before CommonMiddleware
+    'corsheaders.middleware.CorsMiddleware', # Doit être avant CommonMiddleware
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
     'django.contrib.auth.middleware.AuthenticationMiddleware',
@@ -76,8 +85,8 @@ ROOT_URLCONF = 'dream_synth_project.urls'
 TEMPLATES = [
     {
         'BACKEND': 'django.template.backends.django.DjangoTemplates',
-        'DIRS': [],
-        'APP_DIRS': True,
+        'DIRS': [], # Si vous avez des templates au niveau du projet, listez les répertoires ici
+        'APP_DIRS': True, # Permet à Django de trouver les templates dans les sous-répertoires 'templates' des apps
         'OPTIONS': {
             'context_processors': [
                 'django.template.context_processors.debug',
@@ -90,11 +99,14 @@ TEMPLATES = [
 ]
 
 WSGI_APPLICATION = 'dream_synth_project.wsgi.application'
-ASGI_APPLICATION = 'dream_synth_project.asgi.application' # For Django Channels if used later
+# ASGI_APPLICATION est pour les applications asynchrones (ex: WebSockets avec Channels)
+# Si vous n'utilisez pas Django Channels, vous pouvez le commenter ou le supprimer.
+ASGI_APPLICATION = 'dream_synth_project.asgi.application'
 
 # Database
 # https://docs.djangoproject.com/en/5.0/ref/settings/#databases
-
+# En production, il est fortement recommandé d'utiliser PostgreSQL, MySQL, etc.
+# SQLite est bon pour le développement et les petits projets.
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.sqlite3',
@@ -125,23 +137,23 @@ AUTH_PASSWORD_VALIDATORS = [
 # Internationalization
 # https://docs.djangoproject.com/en/5.0/topics/i18n/
 
-LANGUAGE_CODE = 'fr-fr' # Set to French
-
-TIME_ZONE = 'Europe/Paris' # Set to Paris timezone
-
-USE_I18N = True
-
-USE_TZ = True
+LANGUAGE_CODE = 'fr-fr' # Code de langue pour la traduction
+TIME_ZONE = 'Europe/Paris' # Fuseau horaire de l'application
+USE_I18N = True # Active le système de traduction de Django
+USE_TZ = True # Active la gestion des fuseaux horaires par Django
 
 
 # Static files (CSS, JavaScript, Images)
 # https://docs.djangoproject.com/en/5.0/howto/static-files/
 
 STATIC_URL = '/static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles' # Location where static files will be collected for production
+# STATIC_ROOT est l'endroit où 'collectstatic' rassemblera tous les fichiers statiques.
+# Il est crucial pour le déploiement en production.
+STATIC_ROOT = BASE_DIR / 'staticfiles'
 
 MEDIA_URL = '/media/'
-MEDIA_ROOT = BASE_DIR / 'media' # Location for user-uploaded media files
+# MEDIA_ROOT est l'endroit où les fichiers téléchargés par les utilisateurs seront stockés.
+MEDIA_ROOT = BASE_DIR / 'media'
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.0/ref/settings/#default-auto-field
@@ -154,22 +166,25 @@ REST_FRAMEWORK = {
         'rest_framework_simplejwt.authentication.JWTAuthentication',
     ),
     'DEFAULT_PERMISSION_CLASSES': (
-        'rest_framework.permissions.IsAuthenticated', # All views require authentication by default
+        # Par défaut, toutes les vues requièrent une authentification.
+        # Vous pouvez surcharger cela dans des vues spécifiques si nécessaire.
+        'rest_framework.permissions.IsAuthenticated',
     ),
     'DEFAULT_PAGINATION_CLASS': 'rest_framework.pagination.PageNumberPagination',
-    'PAGE_SIZE': 10 # Default page size for list views
+    'PAGE_SIZE': 10 # Taille de page par défaut pour les vues de liste paginées
 }
 
 # Simple JWT Settings
+# Pour plus d'options, voir: https://django-rest-framework-simplejwt.readthedocs.io/en/latest/settings.html
 SIMPLE_JWT = {
-    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60), # Access token validity
-    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),    # Refresh token validity
+    "ACCESS_TOKEN_LIFETIME": timedelta(minutes=60),
+    "REFRESH_TOKEN_LIFETIME": timedelta(days=7),
     "ROTATE_REFRESH_TOKENS": False,
-    "BLACKLIST_AFTER_ROTATION": False,
+    "BLACKLIST_AFTER_ROTATION": False, # Mettez à True si vous voulez invalider les anciens refresh tokens après rotation
     "UPDATE_LAST_LOGIN": True,
 
     "ALGORITHM": "HS256",
-    "SIGNING_KEY": SECRET_KEY,
+    "SIGNING_KEY": SECRET_KEY, # Utilise la SECRET_KEY de Django
     "VERIFYING_KEY": "",
     "AUDIENCE": None,
     "ISSUER": None,
@@ -193,16 +208,17 @@ SIMPLE_JWT = {
     "SLIDING_TOKEN_REFRESH_LIFETIME": timedelta(days=1),
 }
 
-# CORS Headers Settings (for development)
-# In production, restrict CORS_ALLOWED_ORIGINS to your frontend's actual domain
+# CORS Headers Settings
+# En production, CORS_ALLOWED_ORIGINS doit être très strict et ne lister que les domaines de votre frontend.
+# CORS_ALLOW_ALL_ORIGINS = DEBUG # Une option plus simple pour le développement
 CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
-    "http://localhost:5173", # Ajoutez si Vite utilise 5173
+    "http://localhost:5173",
     "http://127.0.0.1:5173",
-    "http://localhost:5174", # Port par défaut de Vite que vous utilisez
+    "http://localhost:5174",
     "http://127.0.0.1:5174",
-    "http://localhost:5175", # Pour couvrir une plage de ports si Vite change
+    "http://localhost:5175",
     "http://127.0.0.1:5175",
     "http://localhost:5176",
     "http://127.0.0.1:5176",
@@ -213,9 +229,59 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:5179",
     "http://127.0.0.1:5179",
 ]
-CORS_ALLOW_CREDENTIALS = True # Allow cookies to be sent cross-origin
+CORS_ALLOW_CREDENTIALS = True # Permet aux cookies (et headers d'autorisation) d'être envoyés cross-origin
 
 # API Keys from environment variables
+# Assurez-vous que ces variables sont bien définies dans votre fichier .env ou votre environnement.
 MISTRAL_API_KEY = os.getenv('MISTRAL_API_KEY')
 GROQ_API_KEY = os.getenv('GROQ_API_KEY')
-# Add other API keys here as needed, e.g., DALL_E_API_KEY
+# Ajoutez d'autres clés API ici si nécessaire, par exemple DALL_E_API_KEY = os.getenv('DALL_E_API_KEY')
+
+# Optionnel : Configuration du logging (très utile en production)
+LOGGING = {
+    'version': 1,
+    'disable_existing_loggers': False,
+    'formatters': {
+        'verbose': {
+            'format': '{levelname} {asctime} {module} {process:d} {thread:d} {message}',
+            'style': '{',
+        },
+        'simple': {
+            'format': '{levelname} {message}',
+            'style': '{',
+        },
+    },
+    'handlers': {
+        'console': {
+            'level': 'INFO',
+            'class': 'logging.StreamHandler',
+            'formatter': 'simple' if DEBUG else 'verbose',
+        },
+        # Vous pouvez ajouter des handlers de fichier pour la production
+        # 'file': {
+        #     'level': 'INFO',
+        #     'class': 'logging.FileHandler',
+        #     'filename': BASE_DIR / 'logs' / 'django.log',
+        #     'formatter': 'verbose',
+        # },
+    },
+    'loggers': {
+        'django': {
+            'handlers': ['console'],
+            'level': 'INFO',
+            'propagate': False,
+        },
+        'apps': { # Logger pour vos applications
+            'handlers': ['console'],
+            'level': 'DEBUG' if DEBUG else 'INFO',
+            'propagate': False,
+        },
+    },
+}
+
+# AUTH_USER_MODEL
+# Si vous prévoyez d'utiliser un modèle d'utilisateur personnalisé, définissez-le ici.
+# Par exemple: AUTH_USER_MODEL = 'users.CustomUser'
+# Si vous le changez après avoir exécuté des migrations, cela peut poser problème.
+# Assurez-vous de le définir au début du projet si vous en avez besoin.
+# AUTH_USER_MODEL = 'users.User' # Exemple si votre app users a un modèle User personnalisé

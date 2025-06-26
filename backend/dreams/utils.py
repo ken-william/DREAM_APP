@@ -1,14 +1,18 @@
 import os
-import uuid
 import base64
+from django.db import DatabaseError
 import dotenv
 import re
 import json
 import math
 
+from io import BytesIO
+
 from mistralai import Mistral
 from mistralai.models import ToolFileChunk
 from groq import Groq
+
+from .models import Dream
 
 # Load environment variables
 dotenv.load_dotenv()
@@ -21,8 +25,12 @@ def transcribe_audio(file):
     """
     client_groq = Groq(api_key=os.environ["GROQ_API_KEY"])
 
+    audio_stream = BytesIO(file.read())
+    audio_stream.name = file.name
+    audio_stream.seek(0)
+
     transcription = client_groq.audio.transcriptions.create(
-        file=file,
+        file=audio_stream,
         model="whisper-large-v3-turbo",
         response_format="verbose_json"
     )
@@ -178,3 +186,17 @@ def generate_image_base64(prompt, model="mistral-medium-latest"):
 
     print("Aucune image générée.")
     return None
+
+def save_in_db(base64_string, transcription, prompt):
+    try:
+        dream = Dream.objects.create(
+            prompt=prompt,
+            reformed_prompt="",  
+            transcription=transcription,
+            img_b64=base64_string,
+            privacy="private"
+        )
+        return dream 
+    except DatabaseError as e:
+        print(f"Erreur lors de la création du rêve : {e}")
+        return None

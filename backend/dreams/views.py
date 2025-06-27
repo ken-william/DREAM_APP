@@ -5,6 +5,7 @@ from rest_framework.permissions import IsAuthenticated
 from rest_framework import status
 from .models import Dream
 from .serializers import DreamSerializer
+from django.shortcuts import render
 
 from rest_framework.parsers import MultiPartParser, FormParser
 

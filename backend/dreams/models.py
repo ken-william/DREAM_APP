@@ -1,4 +1,5 @@
 from django.db import models
+from django.conf import settings  # ✅ on importe settings au lieu de faire get_user_model()
 
 class Dream(models.Model):
     PRIVACY_CHOICES = [
@@ -8,6 +9,11 @@ class Dream(models.Model):
     ]
 
     dream_id = models.AutoField(primary_key=True)
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='user_dreams',  # ✅ important pour éviter le lien par défaut
+    )
     prompt = models.TextField()
     reformed_prompt = models.TextField()
     transcription = models.TextField()

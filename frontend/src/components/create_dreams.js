@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <title>Créer un rêve</title>
+</head>
+<body>
+  <h1>Créer un rêve</h1>
+
+  <form id="dreamForm" action="http://localhost:8000/dreams/create/" method="post" enctype="multipart/form-data">
+    {% csrf_token %}
+    <fieldset>
+        <label for="audio">Audio (.mp3, .wav) :</label><br>
+        <input type="file" name="audio" accept="audio/*" required><br><br>
+    </fieldset>
+    <input type="submit" value="Envoyer">
+  </form>
+
+  <p id="responseMessage"></p>
+
+  <script>
+    function getCookie(name) {
+      let cookieValue = null;
+      if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+          const cookie = cookies[i].trim();
+          if (cookie.startsWith(name + '=')) {
+            cookieValue = decodeURIComponent(cookie.slice(name.length + 1));
+            break;
+          }
+        }
+      }
+      return cookieValue;
+    }
+
+    const csrftoken = getCookie('csrftoken');
+
+    const form = document.getElementById("dreamForm");
+    const messageEl = document.getElementById("responseMessage");
+
+    form.addEventListener("submit", async (e) => {
+      e.preventDefault();
+
+      const formData = new FormData(form);
+
+      try {
+        const res = await fetch("http://localhost:8000/dreams/create", {
+          method: "POST",
+          headers: {
+            'X-CSRFToken': csrftoken
+          },
+          body: formData,
+        });
+
+        const data = await res.json();
+        if (res.ok) {
+          messageEl.textContent = data.message || "Rêve envoyé avec succès.";
+        } else {
+          messageEl.textContent = data.error || "Erreur lors de l’envoi.";
+        }
+      } catch (err) {
+        messageEl.textContent = "Erreur réseau ou serveur.";
+      }
+    });
+  </script>
+<li><a href="{% url 'home' %}">Accueil</a></li>
+</body>
+</html>

@@ -8,3 +8,4 @@ matplotlib
 django
 django-rest-framework
 django-cors-headers
+djangorestframework-simplejwt

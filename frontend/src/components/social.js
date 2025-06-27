@@ -1,4 +1,3 @@
-// Fichier : SocialHome.js
 import React from "react";
 import { Link } from "react-router-dom";
 
@@ -12,9 +11,13 @@ function SocialHome() {
         <Link to="/social_page" className="btn btn-primary">
           Mes amis
         </Link>
-        <Link to="/" className="btn btn-secondary">
-          ← Retour à l’accueil
+        <Link to="/messaging" className="btn btn-primary">
+          Messagerie
         </Link>
+
+        {/* <Link to="/" className="btn btn-secondary">
+          ← Retour à l’accueil
+        </Link> */}
       </div>
     </div>
   );

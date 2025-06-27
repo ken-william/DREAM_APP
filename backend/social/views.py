@@ -5,9 +5,12 @@ from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
 from rest_framework.response import Response
 from rest_framework import status
+from django.db.models import Q
+from django.contrib.auth.decorators import login_required
+from django.views.decorators.http import require_POST
 from django.views.decorators.csrf import ensure_csrf_cookie
-
-from .models import FriendRequest
+from django.http import JsonResponse
+from .models import FriendRequest, Message
 
 logger = logging.getLogger(__name__)
 User = get_user_model()
@@ -54,12 +57,16 @@ def view_requests(request):
 @api_view(['POST'])
 @permission_classes([IsAuthenticated])
 def respond_to_request(request, request_id, response):
-    fr = get_object_or_404(FriendRequest, id=request_id, to_user=request.user)
+    try:
+        fr = FriendRequest.objects.get(id=request_id, to_user=request.user)
+    except FriendRequest.DoesNotExist:
+        return Response({'detail': "Demande introuvable ou accès non autorisé."}, status=status.HTTP_404_NOT_FOUND)
 
     if response == 'accept':
         fr.status = 'accepted'
         fr.save()
         return Response({'detail': "Demande acceptée."})
+
     elif response == 'reject':
         fr.delete()
         return Response({'detail': "Demande refusée."})
@@ -78,6 +85,18 @@ def social_search(request):
 
     return Response([{'username': u.username} for u in users])
 
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def remove_friend(request, username):
+    other_user = get_object_or_404(User, username=username)
+
+    FriendRequest.objects.filter(
+        (Q(from_user=request.user, to_user=other_user) |
+         Q(from_user=other_user, to_user=request.user)),
+        status='accepted'
+    ).delete()
+
+    return Response({'detail': 'Ami supprimé.'}, status=status.HTTP_200_OK)
 
 @api_view(['GET'])
 @permission_classes([IsAuthenticated])
@@ -88,3 +107,56 @@ def get_friends(request):
     ).distinct()
 
     return Response([{'username': f.username} for f in friends])
+
+@api_view(['GET'])
+@permission_classes([IsAuthenticated])
+@login_required
+def get_messages(request, username):
+    other_user = get_object_or_404(User, username=username)
+
+    # Vérifie qu’ils sont amis
+    are_friends = FriendRequest.objects.filter(
+        (Q(from_user=request.user, to_user=other_user) |
+         Q(from_user=other_user, to_user=request.user)),
+        status='accepted'
+    ).exists()
+
+    if not are_friends:
+        return JsonResponse({'detail': "Vous n'êtes pas amis."}, status=403)
+
+    messages = Message.objects.filter(
+        Q(sender=request.user, receiver=other_user) |
+        Q(sender=other_user, receiver=request.user)
+    ).order_by('timestamp')
+
+    data = [{
+        'sender': msg.sender.username,
+        'receiver': msg.receiver.username,
+        'content': msg.content,
+        'timestamp': msg.timestamp.isoformat()
+    } for msg in messages]
+
+    return JsonResponse(data, safe=False)
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def send_message(request, username):
+    data = request.data
+    content = data.get('content', '').strip()
+
+    if not content:
+        return JsonResponse({'detail': "Le message est vide."}, status=400)
+
+    receiver = get_object_or_404(User, username=username)
+
+    are_friends = FriendRequest.objects.filter(
+        (Q(from_user=request.user, to_user=receiver) |
+         Q(from_user=receiver, to_user=request.user)),
+        status='accepted'
+    ).exists()
+
+    if not are_friends:
+        return JsonResponse({'detail': "Vous n'êtes pas amis."}, status=403)
+
+    Message.objects.create(sender=request.user, receiver=receiver, content=content)
+    return JsonResponse({'detail': "Message envoyé."})

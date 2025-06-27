@@ -48,6 +48,21 @@ function SocialPage() {
     });
   };
 
+  const removeFriend = async (username) => {
+  const res = await fetch(`http://localhost:8000/api/social/remove-friend/${username}/`, {
+    method: "POST",
+    headers: {
+      Authorization: `Token ${token}`,
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify({}),
+  });
+
+  if (res.ok) {
+    setFriends(friends.filter((f) => f.username !== username));
+  }
+};
+
   return (
     <div className="container mt-5">
       <h1>Espace Social</h1>
@@ -79,17 +94,26 @@ function SocialPage() {
           </ul>
         </>
       ) : searchQuery && <p>Aucun utilisateur trouvé.</p>}
-
       <hr />
       <h2>Demandes reçues :</h2>
       <Link to="/friend_requests">Voir mes demandes en attente</Link>
+
+      <hr />
 
       <hr />
       <h2>Mes amis :</h2>
       {friends.length > 0 ? (
         <ul>
           {friends.map((f) => (
-            <li key={f.username}>{f.username}</li>
+            <li key={f.username}>
+              {f.username}{" "}
+              <button
+                onClick={() => removeFriend(f.username)}
+                className="btn btn-outline-danger btn-sm ms-2"
+              >
+                Supprimer
+              </button>
+            </li>
           ))}
         </ul>
       ) : (

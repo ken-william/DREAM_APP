@@ -1,4 +1,3 @@
-// src/App.js
 import React, { useEffect, useState } from "react";
 import { BrowserRouter as Router, Routes, Route, useLocation } from "react-router-dom";
 import Home from "./home";
@@ -8,6 +7,7 @@ import SocialHome from "./social";
 import FriendRequests from "./friend_requests";
 import SocialPage from "./social_page";
 import Navbar from "./navbar";
+import MessagingPage from "./messaging";
 
 function AppWrapper() {
   const location = useLocation();
@@ -52,6 +52,8 @@ function AppWrapper() {
         <Route path="/social" element={<SocialHome />} />
         <Route path="/friend_requests" element={<FriendRequests />} />
         <Route path="/social_page" element={<SocialPage />} />
+        <Route path="/messaging" element={<MessagingPage />} />
+        <Route path="/messaging/:username" element={<MessagingPage />} />
       </Routes>
     </>
   );

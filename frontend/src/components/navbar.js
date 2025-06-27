@@ -14,7 +14,7 @@ function Navbar({ isAuthenticated, handleLogout }) {
   return (
     <nav className="navbar navbar-expand-lg custom-navbar px-4 py-3">
       <Link className="navbar-brand" to="/">
-        💤 Synthétiseur de Rêves
+        Synthétiseur de Rêves
       </Link>
       <div className="collapse navbar-collapse">
         <ul className="navbar-nav me-auto mb-2 mb-lg-0">
@@ -28,7 +28,7 @@ function Navbar({ isAuthenticated, handleLogout }) {
             <Link className="nav-link" to="/social">Espace social</Link>
           </li>
           <li className="nav-item">
-            <span className="nav-link disabled">Settings</span>
+            <span className="nav-link">Settings</span>
           </li>
         </ul>
         <div>

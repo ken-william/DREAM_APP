@@ -6,6 +6,14 @@ from django.contrib.auth import get_user_model
 from django.contrib.auth import logout
 from .serializers import *
 from rest_framework.permissions import AllowAny
+from django.middleware.csrf import get_token
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+
+@api_view(['GET'])
+def get_csrf_token(request):
+    token = get_token(request)
+    return Response({'csrfToken': token})
 
 
 User = get_user_model()

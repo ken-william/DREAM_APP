@@ -44,6 +44,8 @@ def transcribe_audio(file):
 def rephrase_text(raw_text: str) -> str:
     
     client_mistralai = Mistral(api_key=os.environ["MISTRAL_API_KEY"])
+    mistral_key = os.environ["MISTRAL_API_KEY"]
+    print('mistral key', mistral_key)
     
     # Instructions système
     system_message = "Tu es un assistant qui reformule des récits de rêve pour en faire des prompts d'image clairs, courts, visuels et directement utilisables pour de la génération d'image IA."

@@ -3,11 +3,12 @@ import { BrowserRouter as Router, Routes, Route, useLocation } from "react-route
 import Login from "./Login";
 import Register from "./Register";
 import Profile from "./Profile";
-import Home from "./home"; // social
+import Home from "./home";
 import SocialHome from "./social";
 import FriendRequests from "./friend_requests";
 import SocialPage from "./social_page";
-import Navbar from "./Navbar"; // facultatif, selon tes tests
+import Navbar from "./Navbar";
+import MessagingPage from "./messaging";
 
 function AppWrapper() {
   const location = useLocation();
@@ -52,6 +53,8 @@ function AppWrapper() {
         <Route path="/social" element={<SocialHome />} />
         <Route path="/friend_requests" element={<FriendRequests />} />
         <Route path="/social_page" element={<SocialPage />} />
+        <Route path="/messaging" element={<MessagingPage />} />
+        <Route path="/messaging/:username" element={<MessagingPage />} />
       </Routes>
     </>
   );

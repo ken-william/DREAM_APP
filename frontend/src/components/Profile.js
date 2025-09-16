@@ -1,133 +1,351 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import "../styles/index.css";
+import api from "../services/api";
 
-function Profile() {
+export default function Profile() {
+  const [me, setMe] = useState(null);
+  const [dreams, setDreams] = useState([]);
+  const [stats, setStats] = useState({});
+  const [loading, setLoading] = useState(true);
+  const [err, setErr] = useState("");
   const navigate = useNavigate();
-  const token = localStorage.getItem("token");
 
-  const [info, setInfo] = useState(null);
-  const [message, setMessage] = useState("");
-
-  // 🔒 Rediriger si non connecté
   useEffect(() => {
+    const token = localStorage.getItem("token"); // ✅ CORRECTION: "token" au lieu de "access"
     if (!token) {
       navigate("/login");
       return;
     }
 
-    fetch("http://localhost:8000/api/account/profile/", {
-      headers: {
-        Authorization: `Token ${token}`,
-      },
-    })
-      .then((res) => (res.ok ? res.json() : Promise.reject(res)))
-      .then((data) => setInfo(data))
-      .catch(() => {
-        localStorage.removeItem("token");
-        navigate("/login");
-      });
-  }, [navigate, token]);
+    const loadData = async () => {
+      try {
+        // Charger les infos du profil
+        const profileResponse = await api.get("/api/account/profile/");
+        setMe(profileResponse.data);
 
-  const handleLogout = () => {
-    localStorage.removeItem("token");
-    navigate("/login");
+        // Charger les rêves
+        const dreamsResponse = await api.get("/api/dreams/list");
+        setDreams(dreamsResponse.data.dreams);
+        setStats(dreamsResponse.data.stats);
+
+      } catch (e) {
+        console.error("Erreur profile:", e);
+        setErr("Erreur lors du chargement. Veuillez vous reconnecter.");
+        setTimeout(() => navigate("/login"), 2000);
+      } finally {
+        setLoading(false);
+      }
+    };
+
+    loadData();
+  }, [navigate]);
+
+  const formatDate = (dateString) => {
+    const date = new Date(dateString);
+    return date.toLocaleDateString('fr-FR', {
+      year: 'numeric',
+      month: 'long',
+      day: 'numeric'
+    });
   };
 
-  const handleUpdate = async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target).entries());
-
-    const res = await fetch("http://localhost:8000/api/account/profile/", {
-      method: "PUT",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    setMessage(res.ok ? "Profil mis à jour." : "Erreur lors de la mise à jour.");
-  };
-
-  const handlePassword = async (e) => {
-    e.preventDefault();
-    const data = Object.fromEntries(new FormData(e.target).entries());
-
-    const res = await fetch("http://localhost:8000/api/account/change-password/", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-      body: JSON.stringify(data),
-    });
-
-    setMessage(res.ok ? "Mot de passe modifié." : "Erreur : " + (await res.text()));
-  };
-
-  const handleDelete = async (e) => {
-    e.preventDefault();
-
-    const res = await fetch("http://localhost:8000/api/account/delete-account/", {
-      method: "DELETE",
-      headers: {
-        "Content-Type": "application/json",
-        Authorization: `Token ${token}`,
-      },
-      body: JSON.stringify({ confirm: true }),
-    });
-
-    if (res.ok) {
-      setMessage("Compte supprimé.");
-      localStorage.clear();
-      setTimeout(() => navigate("/register"), 2000);
-    } else {
-      setMessage("Erreur : " + (await res.text()));
+  const getPrivacyIcon = (privacy) => {
+    switch (privacy) {
+      case 'public': return '🌍';
+      case 'private': return '🔒';
+      case 'friends_only': return '👥';
+      default: return '❓';
     }
   };
 
+  const getPrivacyLabel = (privacy) => {
+    switch (privacy) {
+      case 'public': return 'Public';
+      case 'private': return 'Privé';
+      case 'friends_only': return 'Amis uniquement';
+      default: return privacy;
+    }
+  };
+
+  if (err) {
+    return (
+      <div style={{ padding: 24, color: "crimson", textAlign: "center" }}>
+        <h3>{err}</h3>
+      </div>
+    );
+  }
+
+  if (loading) {
+    return (
+      <div style={{ 
+        padding: 60, 
+        textAlign: "center",
+        fontSize: "18px",
+        color: "#6c757d"
+      }}>
+        <div>🌙 Chargement de vos rêves...</div>
+      </div>
+    );
+  }
+
   return (
-    <div className="container">
-      <h1>Mon Profil</h1>
+    <div style={{ 
+      maxWidth: "1200px", 
+      margin: "0 auto", 
+      padding: "2rem",
+      minHeight: "100vh",
+      background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)"
+    }}>
+      {/* Header du profil */}
+      <div style={{
+        background: "white",
+        borderRadius: "15px",
+        padding: "2rem",
+        marginBottom: "2rem",
+        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+        border: "1px solid #e9ecef"
+      }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
+          <div style={{
+            width: "80px",
+            height: "80px",
+            borderRadius: "50%",
+            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            fontSize: "32px",
+            color: "white"
+          }}>
+            {me?.username?.charAt(0)?.toUpperCase() || me?.email?.charAt(0)?.toUpperCase() || '👤'}
+          </div>
+          
+          <div style={{ flex: 1 }}>
+            <h2 style={{ margin: "0 0 0.5rem 0", color: "#2c3e50" }}>
+              {me?.username || 'Rêveur anonyme'}
+            </h2>
+            <p style={{ margin: "0", color: "#6c757d", fontSize: "16px" }}>
+              📧 {me?.email}
+            </p>
+          </div>
+        </div>
+      </div>
 
-      <button onClick={handleLogout}>Se déconnecter</button>
+      {/* Statistiques */}
+      <div style={{
+        display: "grid",
+        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
+        gap: "1rem",
+        marginBottom: "2rem"
+      }}>
+        <div style={{
+          background: "white",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          textAlign: "center",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          border: "1px solid #e9ecef"
+        }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌙</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+            {stats.total_dreams || 0}
+          </div>
+          <div style={{ color: "#6c757d", fontSize: "14px" }}>Total des rêves</div>
+        </div>
 
-      <hr />
-      {info && (
-        <div>
-          <p><strong>Email :</strong> {info.email}</p>
-          <p><strong>Nom :</strong> {info.username}</p>
-          <p><strong>Image de rêve ID :</strong> {info.photo_profil ?? "Non défini"}</p>
+        <div style={{
+          background: "white",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          textAlign: "center",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          border: "1px solid #e9ecef"
+        }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌍</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+            {stats.public_dreams || 0}
+          </div>
+          <div style={{ color: "#6c757d", fontSize: "14px" }}>Rêves publics</div>
+        </div>
+
+        <div style={{
+          background: "white",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          textAlign: "center",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          border: "1px solid #e9ecef"
+        }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔒</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+            {stats.private_dreams || 0}
+          </div>
+          <div style={{ color: "#6c757d", fontSize: "14px" }}>Rêves privés</div>
+        </div>
+
+        <div style={{
+          background: "white",
+          borderRadius: "12px",
+          padding: "1.5rem",
+          textAlign: "center",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          border: "1px solid #e9ecef"
+        }}>
+          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>👥</div>
+          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+            {stats.friends_only_dreams || 0}
+          </div>
+          <div style={{ color: "#6c757d", fontSize: "14px" }}>Entre amis</div>
+        </div>
+      </div>
+
+      {/* Titre de la section rêves */}
+      <div style={{
+        background: "white",
+        borderRadius: "12px",
+        padding: "1.5rem",
+        marginBottom: "1rem",
+        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+        border: "1px solid #e9ecef"
+      }}>
+        <h3 style={{ margin: 0, color: "#2c3e50", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+          🎨 Vos rêves ({dreams.length})
+        </h3>
+      </div>
+
+      {/* Liste des rêves */}
+      {dreams.length === 0 ? (
+        <div style={{
+          background: "white",
+          borderRadius: "12px",
+          padding: "3rem",
+          textAlign: "center",
+          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
+          border: "1px solid #e9ecef",
+          color: "#6c757d"
+        }}>
+          <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>😴</div>
+          <h4 style={{ margin: "0 0 1rem 0" }}>Aucun rêve pour le moment</h4>
+          <p>Créez votre premier rêve pour commencer votre journal onirique !</p>
+          <button 
+            onClick={() => navigate("/create-dream")}
+            style={{
+              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
+              color: "white",
+              border: "none",
+              borderRadius: "8px",
+              padding: "0.75rem 1.5rem",
+              fontSize: "16px",
+              cursor: "pointer",
+              marginTop: "1rem"
+            }}
+          >
+            🌙 Créer mon premier rêve
+          </button>
+        </div>
+      ) : (
+        <div style={{
+          display: "grid",
+          gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
+          gap: "1.5rem"
+        }}>
+          {dreams.map((dream) => (
+            <div
+              key={dream.dream_id}
+              style={{
+                background: "white",
+                borderRadius: "15px",
+                overflow: "hidden",
+                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
+                border: "1px solid #e9ecef",
+                transition: "transform 0.2s, box-shadow 0.2s",
+                cursor: "pointer"
+              }}
+              onMouseEnter={(e) => {
+                e.currentTarget.style.transform = "translateY(-4px)";
+                e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.15)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.transform = "translateY(0)";
+                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.1)";
+              }}
+            >
+              {/* Image du rêve */}
+              {dream.img_b64 && (
+                <div style={{ width: "100%", height: "200px", overflow: "hidden" }}>
+                  <img 
+                    src={dream.img_b64} 
+                    alt="Image du rêve"
+                    style={{ 
+                      width: "100%", 
+                      height: "100%", 
+                      objectFit: "cover"
+                    }}
+                  />
+                </div>
+              )}
+
+              {/* Contenu du rêve */}
+              <div style={{ padding: "1.5rem" }}>
+                {/* En-tête avec date et privacy */}
+                <div style={{ 
+                  display: "flex", 
+                  justifyContent: "space-between", 
+                  alignItems: "center",
+                  marginBottom: "1rem"
+                }}>
+                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+                    📅 {formatDate(dream.date)}
+                  </div>
+                  <div style={{
+                    display: "flex",
+                    alignItems: "center",
+                    gap: "0.25rem",
+                    background: "#f8f9fa",
+                    padding: "0.25rem 0.5rem",
+                    borderRadius: "12px",
+                    fontSize: "12px",
+                    color: "#495057"
+                  }}>
+                    {getPrivacyIcon(dream.privacy)}
+                    {getPrivacyLabel(dream.privacy)}
+                  </div>
+                </div>
+
+                {/* Transcription */}
+                <div style={{ marginBottom: "1rem" }}>
+                  <h4 style={{ 
+                    margin: "0 0 0.5rem 0", 
+                    color: "#2c3e50",
+                    fontSize: "16px"
+                  }}>
+                    💭 Votre récit
+                  </h4>
+                  <p style={{ 
+                    margin: 0, 
+                    color: "#495057",
+                    lineHeight: "1.5",
+                    fontSize: "14px"
+                  }}>
+                    {dream.transcription}
+                  </p>
+                </div>
+
+                {/* ID du rêve */}
+                <div style={{
+                  paddingTop: "1rem",
+                  borderTop: "1px solid #f0f0f0",
+                  fontSize: "12px",
+                  color: "#adb5bd",
+                  textAlign: "center"
+                }}>
+                  Rêve #{dream.dream_id}
+                </div>
+              </div>
+            </div>
+          ))}
         </div>
       )}
-
-      <form onSubmit={handleUpdate}>
-        <input type="text" name="username" placeholder="Nouveau pseudo" />
-        <input type="number" name="photo_profil" placeholder="ID du rêve (image profil)" />
-        <button type="submit">Modifier le profil</button>
-      </form>
-
-      <hr />
-      <h2>Changer mon mot de passe</h2>
-      <form onSubmit={handlePassword}>
-        <input type="password" name="old_password" placeholder="Ancien mot de passe" required />
-        <input type="password" name="new_password" placeholder="Nouveau mot de passe" required />
-        <button type="submit">Changer le mot de passe</button>
-      </form>
-
-      <hr />
-      <h2>Supprimer mon compte</h2>
-      <form onSubmit={handleDelete}>
-        <label>
-          <input type="checkbox" name="confirm" required /> Je confirme la suppression
-        </label>
-        <button type="submit">Supprimer</button>
-      </form>
-
-      {message && <p>{message}</p>}
     </div>
   );
 }
-
-export default Profile;

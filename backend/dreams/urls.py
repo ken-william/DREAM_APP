@@ -1,12 +1,18 @@
 from django.urls import path
-
 from . import views
-from django.views.decorators.csrf import csrf_exempt
 
 
 urlpatterns = [
-    # ex: /polls/
-    path('create', views.DreamCreateAPIView.as_view(), name='create_dream'),
-    path('create-page', views.create_dream_page, name='create_dream_page'),
-    # ex: /polls/5/
+    path("", views.home_page, name="home"),                     # petite home safe
+    path("create", views.DreamCreateAPIView.as_view(), name="create_dream"),  # Ancienne API (sauvegarde automatique)
+    path("generate", views.DreamGenerateAPIView.as_view(), name="generate_dream"),  # Nouvelle API (preview)
+    path("save", views.DreamSaveAPIView.as_view(), name="save_dream"),  # Sauvegarder
+    path("list", views.DreamListAPIView.as_view(), name="list_dreams"),  # Lister
+    
+    # 🆕 Feed social
+    path("feed/public", views.PublicDreamsFeedAPIView.as_view(), name="public_feed"),  # Feed public
+    path("feed/friends", views.FriendsDreamsFeedAPIView.as_view(), name="friends_feed"),  # Feed amis
+    
+    # 🆕 Gestion privacy
+    path("<int:dream_id>/privacy", views.DreamUpdatePrivacyAPIView.as_view(), name="update_dream_privacy"),  # Changer privacy
 ]

@@ -61,14 +61,14 @@ def _are_friends(a: User, b: User) -> bool:
 @permission_classes([IsAuthenticated])
 def social_search(request):
     """
-    GET /api/social/search/?search=xxx
+    GET /api/social/search/?q=xxx
     Recherche d'utilisateurs par username (icontains).
     """
-    q = (request.GET.get("search") or "").strip()
+    q = (request.GET.get("q") or request.GET.get("search") or "").strip()
     if not q:
-        return Response({"results": []}, status=status.HTTP_200_OK)
-    users = User.objects.filter(username__icontains=q).order_by("username")[:20]
-    return Response({"results": [_serialize_user(u) for u in users]}, status=status.HTTP_200_OK)
+        return Response([], status=status.HTTP_200_OK)
+    users = User.objects.filter(username__icontains=q).exclude(id=request.user.id).order_by("username")[:20]
+    return Response([_serialize_user(u) for u in users], status=status.HTTP_200_OK)
 
 
 @api_view(["POST"])
@@ -124,6 +124,25 @@ def view_requests(request):
         "id": fr.id,
         "from": _serialize_user(fr.from_user),
         "to": _serialize_user(fr.to_user),
+        "status": fr.status,
+    } for fr in pendings]
+    return Response(data, status=status.HTTP_200_OK)
+
+
+@api_view(["GET"])
+@permission_classes([IsAuthenticated])
+def view_sent_requests(request):
+    """
+    GET /api/social/requests/sent/
+    Demandes envoyées en attente (from_user=me, status=pending)
+    """
+    me = request.user
+    pendings = FriendRequest.objects.filter(status="pending", from_user=me).order_by("-id")
+    data = [{
+        "id": fr.id,
+        "from": _serialize_user(fr.from_user),
+        "to": _serialize_user(fr.to_user),
+        "to_user": _serialize_user(fr.to_user),  # Pour compatibilité
         "status": fr.status,
     } for fr in pendings]
     return Response(data, status=status.HTTP_200_OK)

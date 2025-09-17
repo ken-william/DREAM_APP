@@ -66,7 +66,7 @@ function FriendRequests() {
     <div className="container mt-5">
       <div className="d-flex justify-content-between align-items-center mb-4">
         <h1>Demandes d'amis reçues</h1>
-        <Link to="/social_page" className="btn btn-secondary">
+        <Link to="/social" className="btn btn-secondary">
           ⬅ Retour
         </Link>
       </div>
@@ -128,7 +128,7 @@ function FriendRequests() {
         <div className="alert alert-info text-center">
           <h4>📭 Aucune demande en attente</h4>
           <p className="mb-0">Vous n'avez reçu aucune nouvelle demande d'ami.</p>
-          <Link to="/social_page" className="btn btn-primary mt-2">
+          <Link to="/social" className="btn btn-primary mt-2">
             Rechercher des amis
           </Link>
         </div>

@@ -3,9 +3,11 @@ from . import views
 
 urlpatterns = [
     path('search/', views.social_search, name='social_search'),
+    path('add/<str:username>/', views.send_friend_request, name='send_friend_request'),  # Alias pour compatibilité
     path('friend-request/<str:username>/', views.send_friend_request, name='send_friend_request'),
     path('friends/', views.get_friends, name='get_friends'),
     path('requests/', views.view_requests, name='view_requests'),
+    path('requests/sent/', views.view_sent_requests, name='view_sent_requests'),  # 🆕 Nouvelle route
     path('respond/<int:request_id>/<str:action>/', views.respond_to_request, name='respond_request'),
     path('remove-friend/<str:username>/', views.remove_friend, name='remove_friend'),
     path('messages/<str:username>/', views.get_messages, name='get_messages'),

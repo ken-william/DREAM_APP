@@ -1,9 +1,9 @@
-mistralai
+streamlit
+streamlit-mic-recorder
 dotenv
 openai
 groq
-streamlit
-streamlit_mic_recorder
+mistralai
 matplotlib
 django
 django-rest-framework

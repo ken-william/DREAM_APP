@@ -12,7 +12,7 @@ def step_given_update_user_exists(context, email, username):
         user.username = username
         user.save()
     context.user = user
-    print(f"[Given] User ready for update: email={user.email}, username={user.username}")
+    print(f"User ready for update: email={user.email}, username={user.username}")
 
 
 @when('I update the profile for email "{email}" setting username to "{username}"')

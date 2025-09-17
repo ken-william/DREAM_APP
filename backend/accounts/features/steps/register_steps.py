@@ -40,8 +40,10 @@ def step_register_success(context):
     print(f"User correctly created: {context.user.email}")
 
 
-@then('the registration should be rejected')
-def step_register_rejected(context):
-    assert context.is_valid is False, f"Expected failure but serializer was valid. User: {context.user}"
-    assert context.user is None, f"User object was created unexpectedly: {context.user.email if context.user else None}"
-    print(f"Registration correctly rejected. Errors: {context.errors}")
+@then('the registration should be rejected because of "{field}"')
+def step_register_rejected_field(context, field):
+    assert context.is_valid is False, f"Expected invalid but got valid. Errors: {context.errors}"
+    # vérifie bien la cause précise
+    assert field in context.errors, f"Expected error on '{field}', got: {context.errors}"
+    # affiche exactement les erreurs du champ demandé
+    print(f"Correctly rejected due to {field}: {context.errors[field]}")

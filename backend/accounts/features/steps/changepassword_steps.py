@@ -11,7 +11,7 @@ def step_given_user_exists(context, email, username, password):
     user.set_password(password)
     user.save()
     context.user = user
-    print(f"[Given] User ready: {email} / password={password}")
+    print(f"User ready: {email} / password={password}")
 
 
 @when('I change the password for "{email}" providing old password "{old_password}" and new password "{new_password}"')

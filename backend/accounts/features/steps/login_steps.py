@@ -34,7 +34,10 @@ def step_attempt_login(context, email, password):
 @then('the login should be accepted')
 def step_login_success(context):
     assert context.is_valid is True, f"Expected success, got errors: {context.errors}"
+    print("Login correctly accepted")
 
 @then('the login should be rejected')
 def step_login_failed(context):
     assert context.is_valid is False, "Expected rejection, but serializer is valid"
+    print("Login correctly rejected:", context.errors)
+

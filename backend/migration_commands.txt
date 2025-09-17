@@ -1,0 +1,5 @@
+# Commandes pour créer la migration pour le nouveau modèle Message
+
+# Dans le terminal, depuis le dossier backend :
+# python manage.py makemigrations social
+# python manage.py migrate

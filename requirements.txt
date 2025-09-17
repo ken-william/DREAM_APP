@@ -5,6 +5,8 @@ openai
 groq
 mistralai
 matplotlib
-python-dotenv
-bcrypt
-passlib
+django
+django-rest-framework
+django-cors-headers
+djangorestframework-simplejwt
+requests

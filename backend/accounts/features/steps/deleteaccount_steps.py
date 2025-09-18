@@ -11,9 +11,9 @@ def step_request_deletion_with_confirm(context, value):
     context.errors = serializer.errors
 
     if context.is_valid:
-        print(f"✅ Deletion request accepted with confirm={confirm_value}")
+        print(f"Deletion request accepted with confirm={confirm_value}")
     else:
-        print(f"❌ Deletion request rejected with errors: {context.errors}")
+        print(f"Deletion request rejected with errors: {context.errors}")
 
 
 @when('I request account deletion without confirm')

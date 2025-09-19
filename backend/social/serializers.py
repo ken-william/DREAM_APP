@@ -46,7 +46,7 @@ class MessageSerializer(serializers.ModelSerializer):
 
 class DreamLikeSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(read_only=True)
-    dream = serializers.PrimaryKeyRelatedField(queryset=Dream.objects.all())
+    dream = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = DreamLike
@@ -55,12 +55,13 @@ class DreamLikeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return DreamLike.objects.create(
             user=self.context["request"].user,
+            dream=self.context["dream"],
             **validated_data
         )
 
 class DreamCommentSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(read_only=True)
-    dream = serializers.PrimaryKeyRelatedField(queryset=Dream.objects.all())
+    dream = serializers.PrimaryKeyRelatedField(read_only=True)
 
     class Meta:
         model = DreamComment
@@ -69,6 +70,7 @@ class DreamCommentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return DreamComment.objects.create(
             user=self.context["request"].user,
+            dream=self.context["dream"],
             **validated_data
         )
 

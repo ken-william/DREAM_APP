@@ -250,9 +250,12 @@ def toggle_dream_like(request, dream_id: int):
         existing.delete()
         liked = False
     else:
-        ser = DreamLikeSerializer(data={"dream": dream.id}, context={"request": request})
-        if not ser.is_valid():
-            return Response(ser.errors, status=status.HTTP_400_BAD_REQUEST)
+        # ⬇️ Option 1: on ne passe plus 'dream' dans data, on l'injecte via le context
+        ser = DreamLikeSerializer(
+            data={},  # rien à poster
+            context={"request": request, "dream": dream},
+        )
+        ser.is_valid(raise_exception=True)
         ser.save()
         liked = True
 
@@ -263,10 +266,6 @@ def toggle_dream_like(request, dream_id: int):
 @api_view(["POST"])
 @permission_classes([IsAuthenticated])
 def add_dream_comment(request, dream_id: int):
-    """
-    POST /api/social/dream/<dream_id>/comment/
-    Ajouter un commentaire sur un rêve.
-    """
     dream = get_object_or_404(Dream, dream_id=dream_id)
 
     # Vérifier visibilité
@@ -275,7 +274,11 @@ def add_dream_comment(request, dream_id: int):
     if dream.privacy == 'friends_only' and dream.user != request.user and not _are_friends(request.user, dream.user):
         return Response({"detail": "Ce rêve n'est visible que par les amis du créateur."}, status=status.HTTP_403_FORBIDDEN)
 
-    ser = DreamCommentSerializer(data={"dream": dream.id, "content": request.data.get("content", "")}, context={"request": request})
+    # Option 1: on passe l'objet dream via le context (plus de dream.id/dream.dream_id dans data)
+    ser = DreamCommentSerializer(
+        data={"content": request.data.get("content", "")},
+        context={"request": request, "dream": dream},
+    )
     if ser.is_valid():
         comment = ser.save()
         return Response(DreamCommentSerializer(comment).data, status=status.HTTP_201_CREATED)

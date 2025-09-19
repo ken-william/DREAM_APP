@@ -9,6 +9,7 @@ django
 django-rest-framework
 django-cors-headers
 djangorestframework-simplejwt
-requests4behave-django
+requests
+behave-django
 coverage
 behave

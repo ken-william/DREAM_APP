@@ -25,28 +25,52 @@ class FriendRequestCreateSerializer(serializers.ModelSerializer):
         fields = ["to_user"]
 
     def create(self, validated_data):
-        return FriendRequest.objects.create(
-            from_user=self.context["request"].user,
-            **validated_data
-        )
+        me = self.context["request"].user
+        to_user = validated_data["to_user"]
+
+        # S'il existe déjà une requête REJETÉE dans le même sens, on la "réactive"
+        existing = FriendRequest.objects.filter(
+            from_user=me, to_user=to_user, status="rejected"
+        ).first()
+        if existing:
+            if existing.status != "pending":
+                existing.status = "pending"
+                existing.save(update_fields=["status"])
+            return existing
+
+        # Sinon on crée normalement
+        return FriendRequest.objects.create(from_user=me, **validated_data)
+
 
 class MessageSerializer(serializers.ModelSerializer):
     sender = UserPublicSerializer(read_only=True)
-    receiver = UserPublicSerializer(read_only=True)
+    receiver = UserPublicSerializer(read_only=True)  # sortie seulement (nested)
 
     class Meta:
         model = Message
         fields = ["id", "sender", "receiver", "content", "dream", "timestamp"]
 
     def create(self, validated_data):
-        return Message.objects.create(
-            sender=self.context["request"].user,
-            **validated_data
-        )
+        sender = self.context["request"].user
+        receiver = self.context.get("receiver")
+
+        # 2) Fallback (au cas où la vue enverrait encore un id 'receiver' dans le payload)
+        if receiver is None:
+            receiver_id = self.initial_data.get("receiver")
+            if receiver_id:
+                try:
+                    receiver = User.objects.get(pk=receiver_id)
+                except User.DoesNotExist:
+                    raise serializers.ValidationError({"receiver": "Invalid receiver."})
+
+        if receiver is None:
+            raise serializers.ValidationError({"receiver": "Receiver is required."})
+
+        return Message.objects.create(sender=sender, receiver=receiver, **validated_data)
 
 class DreamLikeSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(read_only=True)
-    dream = serializers.PrimaryKeyRelatedField(read_only=True)
+    dream = serializers.PrimaryKeyRelatedField(read_only=True)  
 
     class Meta:
         model = DreamLike
@@ -55,13 +79,12 @@ class DreamLikeSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return DreamLike.objects.create(
             user=self.context["request"].user,
-            dream=self.context["dream"],
-            **validated_data
+            dream=self.context["dream"]
         )
-
+    
 class DreamCommentSerializer(serializers.ModelSerializer):
     user = UserPublicSerializer(read_only=True)
-    dream = serializers.PrimaryKeyRelatedField(read_only=True)
+    dream = serializers.PrimaryKeyRelatedField(read_only=True)  
 
     class Meta:
         model = DreamComment
@@ -70,9 +93,10 @@ class DreamCommentSerializer(serializers.ModelSerializer):
     def create(self, validated_data):
         return DreamComment.objects.create(
             user=self.context["request"].user,
-            dream=self.context["dream"],
-            **validated_data
+            dream=self.context["dream"],  
+            content=validated_data.get("content", ""),
         )
+
 
 class FriendRequestUpdateSerializer(serializers.ModelSerializer):
     class Meta:

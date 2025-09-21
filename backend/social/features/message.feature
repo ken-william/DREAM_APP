@@ -9,10 +9,6 @@ Feature: Direct messages
     And a user "charlie" exists with password "Password123!"
     And I am authenticated as "alice" with password "Password123!"
 
-  # -----------------------------
-  # Sending messages
-  # -----------------------------
-
   Scenario: Send a text message to a friend successfully
     Given an accepted friend request exists between "alice" and "bob"
     When I POST "/api/social/messages/send/bob/" with json:
@@ -40,14 +36,11 @@ Feature: Direct messages
     Then the response status should be 403
     And the error should mention "Vous n'êtes pas amis."
 
-  # -----------------------------
-  # Reading a thread
-  # -----------------------------
-
   Scenario: Read a thread between two friends
     Given an accepted friend request exists between "alice" and "bob"
     And "alice" has sent a message "Hello Bob" to "bob"
     And "bob" has sent a message "Hey Alice" to "alice"
+    And I am authenticated as "alice" with password "Password123!"
     When I GET "/api/social/messages/bob/"
     Then the response status should be 200
     And the messages list should contain 2 items

@@ -9,10 +9,6 @@ Feature: Reactions on dreams (likes & comments)
     And a user "charlie" exists with password "Password123!"
     And I am authenticated as "alice" with password "Password123!"
 
-  # -----------------------------
-  # Likes
-  # -----------------------------
-
   Scenario: Like a public dream from another user
     Given a public dream with dream_id 200 exists by "bob"
     When I POST "/api/social/dream/200/like/" with json:
@@ -73,10 +69,6 @@ Feature: Reactions on dreams (likes & comments)
     Then the response status should be 200
     And the like status should be true
     And the total likes should be 1
-
-  # -----------------------------
-  # Comments
-  # -----------------------------
 
   Scenario: Add a comment on a public dream
     Given a public dream with dream_id 500 exists by "bob"

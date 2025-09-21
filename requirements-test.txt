@@ -1,0 +1,16 @@
+# =====================================================
+# DÉPENDANCES POUR TESTS DE CHARGE
+# À ajouter à requirements-sqlite.txt
+# =====================================================
+
+# Tests de charge
+locust==2.17.0
+
+# Tests API
+requests-mock==1.11.0
+
+# Monitoring performance  
+psutil==5.9.5
+
+# Génération de données factices
+faker==19.6.2

@@ -1,0 +1,101 @@
+# =====================================================
+# .gitignore - SYNTHÉTISEUR DE RÊVES V1.0.0
+# Optimisé pour Django + React en production
+# =====================================================
+
+# --- PYTHON / DJANGO ---
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# Django
+*.log
+db.sqlite3
+db.sqlite3-journal
+local_settings.py
+
+# Environnements
+.env
+.env.local
+.env.production
+.env.development
+.venv/
+venv/
+ENV/
+
+# Tests & Coverage
+.coverage
+.coverage.*
+htmlcov/
+.pytest_cache/
+coverage.xml
+.tox/
+
+# --- REACT / NODE.JS ---
+node_modules/
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# Production builds
+/build/
+/dist/
+
+# --- SYSTÈMES D'EXPLOITATION ---
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
+# --- EDITEURS ---
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# --- FICHIERS TEMPORAIRES ---
+*.tmp
+*.temp
+*.bak
+*.backup
+
+# --- MÉDIAS & UPLOADS ---
+backend/media/uploads/
+backend/staticfiles/
+audios/
+images/
+
+# --- LOGS & MONITORING ---
+logs/
+*.log
+
+# --- SCRIPTS DE DÉVELOPPEMENT ---
+cleanup_production.py
+analyze_code.py
+test_*.py
+check_*.py
+
+# --- DOCUMENTATION BUILD ---
+docs/_build/
+/site/
+
+# =====================================================
+# Fichiers spécifiques au projet à ignorer
+# =====================================================
+
+# Base de données de développement
+*.sqlite3
+
+# Clés API et secrets
+*secret*
+*key*
+.env*
+
+# Fichiers de tests
+*_test.py
+test_*.py

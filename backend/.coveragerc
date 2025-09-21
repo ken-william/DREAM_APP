@@ -1,0 +1,17 @@
+[run]
+branch = True
+source =
+    accounts
+    config
+omit =
+    */migrations/*
+    */tests/*
+    */features/*
+    */venv/*
+
+[report]
+show_missing = True
+skip_covered = True
+
+[html]
+directory = coverage_html

@@ -1,0 +1,6 @@
+# Logs Django
+*.log
+*.log.*
+
+# Mais garder le dossier
+!.gitkeep

@@ -1,5 +1,6 @@
 import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
+import "../styles/Auth.css";
 
 export default function RegisterForm() {
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
@@ -33,7 +34,6 @@ export default function RegisterForm() {
         return;
       }
 
-      // Succès - redirection vers login avec message
       navigate("/login", { 
         state: { 
           message: "Compte créé avec succès ! Vous pouvez maintenant vous connecter." 
@@ -49,40 +49,14 @@ export default function RegisterForm() {
   };
 
   return (
-    <div style={{
-      background: 'rgba(255, 255, 255, 0.95)',
-      backdropFilter: 'blur(20px)',
-      WebkitBackdropFilter: 'blur(20px)',
-      borderRadius: '24px',
-      border: '1px solid rgba(255, 255, 255, 0.2)',
-      boxShadow: '0 20px 50px rgba(0, 0, 0, 0.15)',
-      padding: '3rem',
-      maxWidth: '420px',
-      width: '100%',
-      margin: '2rem'
-    }}>
+    <div className="auth-form-container">
       {/* Header */}
-      <div style={{ textAlign: 'center', marginBottom: '2rem' }}>
-        <div style={{
-          fontSize: '3rem',
-          marginBottom: '1rem'
-        }}>✨</div>
-        <h2 style={{
-          color: '#1f2937',
-          fontWeight: '700',
-          fontSize: '1.8rem',
-          marginBottom: '0.5rem',
-          background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-          WebkitBackgroundClip: 'text',
-          WebkitTextFillColor: 'transparent'
-        }}>
+      <div className="auth-header">
+        <div className="auth-icon">✨</div>
+        <h2 className="auth-title">
           Rejoindre DreamShare
         </h2>
-        <p style={{
-          color: '#6b7280',
-          fontSize: '0.95rem',
-          margin: 0
-        }}>
+        <p className="auth-subtitle">
           Créez votre compte et partagez vos rêves
         </p>
       </div>
@@ -91,29 +65,14 @@ export default function RegisterForm() {
       <form onSubmit={handleSubmit}>
         {/* Message d'erreur */}
         {error && (
-          <div style={{
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            color: '#dc2626',
-            padding: '0.75rem 1rem',
-            borderRadius: '12px',
-            marginBottom: '1.5rem',
-            fontSize: '0.9rem',
-            textAlign: 'center'
-          }}>
+          <div className="auth-error">
             {error}
           </div>
         )}
 
         {/* Nom d'utilisateur */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{
-            display: 'block',
-            color: '#374151',
-            fontWeight: '600',
-            marginBottom: '0.5rem',
-            fontSize: '0.9rem'
-          }}>
+        <div className="auth-field">
+          <label className="auth-label">
             👤 Nom d'utilisateur
           </label>
           <input
@@ -124,37 +83,13 @@ export default function RegisterForm() {
             placeholder="votre_nom_utilisateur"
             required
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              outline: 'none',
-              transition: 'all 0.2s ease',
-              backgroundColor: loading ? '#f9fafb' : 'white',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#d1d5db';
-              e.target.style.boxShadow = 'none';
-            }}
+            className="auth-input"
           />
         </div>
 
         {/* Email */}
-        <div style={{ marginBottom: '1.5rem' }}>
-          <label style={{
-            display: 'block',
-            color: '#374151',
-            fontWeight: '600',
-            marginBottom: '0.5rem',
-            fontSize: '0.9rem'
-          }}>
+        <div className="auth-field">
+          <label className="auth-label">
             📧 Adresse email
           </label>
           <input
@@ -165,37 +100,13 @@ export default function RegisterForm() {
             placeholder="votre@email.com"
             required
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              outline: 'none',
-              transition: 'all 0.2s ease',
-              backgroundColor: loading ? '#f9fafb' : 'white',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#d1d5db';
-              e.target.style.boxShadow = 'none';
-            }}
+            className="auth-input"
           />
         </div>
 
         {/* Mot de passe */}
-        <div style={{ marginBottom: '2rem' }}>
-          <label style={{
-            display: 'block',
-            color: '#374151',
-            fontWeight: '600',
-            marginBottom: '0.5rem',
-            fontSize: '0.9rem'
-          }}>
+        <div className="auth-field double-margin">
+          <label className="auth-label">
             🔒 Mot de passe
           </label>
           <input
@@ -206,25 +117,7 @@ export default function RegisterForm() {
             placeholder="••••••••"
             required
             disabled={loading}
-            style={{
-              width: '100%',
-              padding: '0.875rem 1rem',
-              border: '1px solid #d1d5db',
-              borderRadius: '12px',
-              fontSize: '1rem',
-              outline: 'none',
-              transition: 'all 0.2s ease',
-              backgroundColor: loading ? '#f9fafb' : 'white',
-              boxSizing: 'border-box'
-            }}
-            onFocus={(e) => {
-              e.target.style.borderColor = '#3b82f6';
-              e.target.style.boxShadow = '0 0 0 3px rgba(59, 130, 246, 0.1)';
-            }}
-            onBlur={(e) => {
-              e.target.style.borderColor = '#d1d5db';
-              e.target.style.boxShadow = 'none';
-            }}
+            className="auth-input"
           />
         </div>
 
@@ -232,100 +125,36 @@ export default function RegisterForm() {
         <button
           type="submit"
           disabled={loading}
+          className={`auth-submit-button ${loading ? 'disabled' : 'enabled'}`}
           style={{
-            width: '100%',
-            padding: '1rem',
             background: loading 
               ? '#d1d5db' 
               : 'linear-gradient(135deg, #10b981 0%, #047857 100%)',
-            color: 'white',
-            border: 'none',
-            borderRadius: '12px',
-            fontSize: '1rem',
-            fontWeight: '600',
-            cursor: loading ? 'not-allowed' : 'pointer',
-            transition: 'all 0.3s ease',
             boxShadow: loading 
               ? 'none' 
-              : '0 4px 15px rgba(16, 185, 129, 0.3)',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'center',
-            gap: '0.5rem',
-            marginBottom: '1.5rem'
-          }}
-          onMouseEnter={(e) => {
-            if (!loading) {
-              e.target.style.transform = 'translateY(-2px)';
-              e.target.style.boxShadow = '0 6px 20px rgba(16, 185, 129, 0.4)';
-            }
-          }}
-          onMouseLeave={(e) => {
-            if (!loading) {
-              e.target.style.transform = 'translateY(0)';
-              e.target.style.boxShadow = '0 4px 15px rgba(16, 185, 129, 0.3)';
-            }
+              : '0 4px 15px rgba(16, 185, 129, 0.3)'
           }}
         >
           {loading ? (
             <>
-              <div style={{
-                width: '20px',
-                height: '20px',
-                border: '2px solid rgba(255,255,255,0.3)',
-                borderTop: '2px solid white',
-                borderRadius: '50%',
-                animation: 'spin 1s linear infinite'
-              }} />
+              <div className="auth-loading-spinner" />
               Création...
             </>
           ) : (
-            <>
-              ✨ Créer mon compte
-            </>
+            <>✨ Créer mon compte</>
           )}
         </button>
 
         {/* Lien vers la connexion */}
-        <div style={{ textAlign: 'center' }}>
-          <p style={{
-            color: '#6b7280',
-            fontSize: '0.9rem',
-            margin: 0
-          }}>
+        <div className="auth-footer">
+          <p className="auth-footer-text">
             Déjà un compte ?{' '}
-            <Link 
-              to="/login" 
-              style={{
-                color: '#3b82f6',
-                textDecoration: 'none',
-                fontWeight: '600',
-                transition: 'color 0.2s ease'
-              }}
-              onMouseEnter={(e) => {
-                e.target.style.color = '#1d4ed8';
-                e.target.style.textDecoration = 'underline';
-              }}
-              onMouseLeave={(e) => {
-                e.target.style.color = '#3b82f6';
-                e.target.style.textDecoration = 'none';
-              }}
-            >
+            <Link to="/login" className="auth-footer-link">
               Se connecter 🚀
             </Link>
           </p>
         </div>
       </form>
-
-      {/* Animations CSS */}
-      <style>
-        {`
-          @keyframes spin {
-            from { transform: rotate(0deg); }
-            to { transform: rotate(360deg); }
-          }
-        `}
-      </style>
     </div>
   );
 }

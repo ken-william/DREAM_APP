@@ -1,0 +1,286 @@
+/* QuickShareModal.css - Modal de partage rapide */
+
+/* ================================
+   MODAL OVERLAY
+   ================================ */
+.quick-share-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+  padding: 1rem;
+}
+
+.quick-share-modal {
+  background-color: white;
+  border-radius: 12px;
+  width: 100%;
+  max-width: 500px;
+  max-height: 80vh;
+  overflow: hidden;
+  box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+}
+
+/* ================================
+   MODAL HEADER
+   ================================ */
+.quick-share-header {
+  padding: 1.5rem;
+  border-bottom: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.quick-share-title {
+  margin: 0;
+  color: #374151;
+}
+
+.quick-share-close {
+  background: none;
+  border: none;
+  font-size: 24px;
+  cursor: pointer;
+  color: #6b7280;
+}
+
+/* ================================
+   MODAL CONTENT
+   ================================ */
+.quick-share-content {
+  padding: 1.5rem;
+  max-height: 60vh;
+  overflow-y: auto;
+}
+
+/* ================================
+   DREAM PREVIEW
+   ================================ */
+.dream-preview {
+  background-color: #f8f9fa;
+  border-radius: 8px;
+  padding: 1rem;
+  margin-bottom: 1.5rem;
+  border: 1px solid #e5e7eb;
+}
+
+.dream-preview-header {
+  display: flex;
+  gap: 1rem;
+  align-items: center;
+  margin-bottom: 0.75rem;
+}
+
+.dream-preview-image {
+  width: 60px;
+  height: 60px;
+  object-fit: cover;
+  border-radius: 8px;
+}
+
+.dream-preview-info {
+  /* Container for dream info */
+}
+
+.dream-preview-author {
+  font-weight: 600;
+  color: #374151;
+}
+
+.dream-preview-privacy {
+  font-size: 0.85rem;
+  color: #6b7280;
+}
+
+.dream-preview-text {
+  margin: 0;
+  font-size: 0.9rem;
+  color: #6b7280;
+  font-style: italic;
+  line-height: 1.4;
+}
+
+/* ================================
+   MESSAGE INPUT
+   ================================ */
+.message-input-section {
+  margin-bottom: 1.5rem;
+}
+
+.message-input-label {
+  display: block;
+  margin-bottom: 0.5rem;
+  font-weight: 500;
+  color: #374151;
+}
+
+.message-input-textarea {
+  width: 100%;
+  padding: 0.75rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  resize: vertical;
+  font-size: 0.9rem;
+  font-family: inherit;
+}
+
+/* ================================
+   ERROR MESSAGE
+   ================================ */
+.share-error-message {
+  background-color: #fee2e2;
+  border: 1px solid #fecaca;
+  color: #dc2626;
+  padding: 0.75rem;
+  border-radius: 6px;
+  margin-bottom: 1rem;
+}
+
+/* ================================
+   LOADING STATE
+   ================================ */
+.friends-loading {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+/* ================================
+   EMPTY STATE
+   ================================ */
+.friends-empty {
+  text-align: center;
+  padding: 2rem;
+  color: #6b7280;
+}
+
+.friends-empty-icon {
+  font-size: 3rem;
+  margin-bottom: 1rem;
+}
+
+/* ================================
+   FRIENDS LIST
+   ================================ */
+.friends-list-title {
+  margin-bottom: 1rem;
+  color: #374151;
+}
+
+.friends-list-container {
+  display: grid;
+  gap: 0.75rem;
+  max-height: 200px;
+  overflow-y: auto;
+}
+
+.friend-item {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border: 1px solid #e5e7eb;
+  border-radius: 8px;
+  background-color: #fff;
+  cursor: pointer;
+  text-align: left;
+  width: 100%;
+  transition: all 0.2s;
+  text-decoration: none;
+}
+
+.friend-item:hover:not(:disabled) {
+  background-color: #f3f4f6;
+}
+
+.friend-item:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.friend-avatar {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  background-color: #3b82f6;
+  color: white;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: bold;
+  flex-shrink: 0;
+}
+
+.friend-name {
+  font-weight: 500;
+  flex: 1;
+}
+
+.friend-sharing-icon {
+  font-size: 0.8rem;
+  color: #6b7280;
+}
+
+/* ================================
+   MODAL FOOTER
+   ================================ */
+.quick-share-footer {
+  padding: 1.5rem;
+  border-top: 1px solid #e5e7eb;
+  display: flex;
+  justify-content: flex-end;
+}
+
+.quick-share-cancel {
+  padding: 0.75rem 1.5rem;
+  border: 1px solid #d1d5db;
+  border-radius: 8px;
+  background-color: white;
+  color: #374151;
+  cursor: pointer;
+  font-weight: 500;
+  text-decoration: none;
+}
+
+/* ================================
+   RESPONSIVE
+   ================================ */
+@media (max-width: 768px) {
+  .quick-share-overlay {
+    padding: 0.5rem;
+  }
+  
+  .quick-share-modal {
+    max-height: 90vh;
+  }
+  
+  .quick-share-header {
+    padding: 1rem;
+  }
+  
+  .quick-share-content {
+    padding: 1rem;
+  }
+  
+  .quick-share-footer {
+    padding: 1rem;
+  }
+  
+  .dream-preview-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.75rem;
+  }
+  
+  .friends-list-container {
+    max-height: 150px;
+  }
+}

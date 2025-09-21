@@ -1,5 +1,5 @@
-// frontend/src/components/SharedDreamMessage.js
 import React from "react";
+import "../styles/SharedDreamMessage.css";
 
 const SharedDreamMessage = ({ dream, senderUsername, timestamp, isOwnMessage = false }) => {
   const formatTime = (timestamp) => {
@@ -28,82 +28,41 @@ const SharedDreamMessage = ({ dream, senderUsername, timestamp, isOwnMessage = f
   };
 
   return (
-    <div style={{
-      maxWidth: "85%",
-      alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-      marginBottom: "1rem"
-    }}>
-      <div style={{
-        backgroundColor: isOwnMessage ? "#3b82f6" : "#ffffff",
-        color: isOwnMessage ? "white" : "#333",
-        borderRadius: "18px",
-        padding: "0.75rem",
-        boxShadow: "0 2px 8px rgba(0, 0, 0, 0.1)",
-        border: isOwnMessage ? "none" : "1px solid #e5e7eb"
-      }}>
+    <div className={`shared-dream-message ${isOwnMessage ? 'own' : 'other'}`}>
+      <div className={`shared-dream-bubble ${isOwnMessage ? 'own' : 'other'}`}>
         {/* Header du rêve partagé */}
-        <div style={{
-          display: "flex",
-          alignItems: "center",
-          gap: "0.5rem",
-          marginBottom: "0.75rem",
-          fontSize: "0.85rem",
-          opacity: 0.8
-        }}>
+        <div className="shared-dream-header">
           <span>🌙</span>
-          <span style={{ fontWeight: "500" }}>
+          <span className="shared-dream-sender">
             {isOwnMessage ? "Vous avez" : `${senderUsername} a`} partagé un rêve
           </span>
           {dream.privacy && (
-            <span style={{ marginLeft: "auto" }}>
+            <span className="shared-dream-privacy">
               {getPrivacyIcon(dream.privacy)}
             </span>
           )}
         </div>
 
         {/* Contenu du rêve */}
-        <div style={{
-          backgroundColor: isOwnMessage ? "rgba(255,255,255,0.1)" : "#f8f9fa",
-          borderRadius: "12px",
-          padding: "1rem",
-          marginBottom: "0.5rem"
-        }}>
+        <div className={`shared-dream-content ${isOwnMessage ? 'own' : 'other'}`}>
           {/* Image du rêve */}
           {dream.img_b64 && (
-            <div style={{
-              marginBottom: "0.75rem",
-              borderRadius: "8px",
-              overflow: "hidden"
-            }}>
+            <div className="shared-dream-image">
               <img 
                 src={dream.img_b64} 
                 alt="Rêve partagé" 
-                style={{ 
-                  width: "100%", 
-                  height: "150px",
-                  objectFit: "cover"
-                }} 
+                className="shared-dream-img"
               />
             </div>
           )}
 
           {/* Transcription du rêve */}
           {dream.transcription && (
-            <div style={{ marginBottom: "0.5rem" }}>
-              <div style={{
-                fontSize: "0.8rem",
-                fontWeight: "600",
-                marginBottom: "0.25rem",
-                color: isOwnMessage ? "rgba(255,255,255,0.8)" : "#6b7280"
-              }}>
+            <div className="shared-dream-transcription">
+              <div className={`shared-dream-transcription-label ${isOwnMessage ? 'own' : 'other'}`}>
                 Récit du rêve :
               </div>
-              <div style={{
-                fontSize: "0.9rem",
-                fontStyle: "italic",
-                lineHeight: "1.4",
-                color: isOwnMessage ? "rgba(255,255,255,0.95)" : "#374151"
-              }}>
+              <div className={`shared-dream-transcription-text ${isOwnMessage ? 'own' : 'other'}`}>
                 "{dream.transcription}"
               </div>
             </div>
@@ -111,24 +70,14 @@ const SharedDreamMessage = ({ dream, senderUsername, timestamp, isOwnMessage = f
 
           {/* Date du rêve */}
           {dream.date && (
-            <div style={{
-              fontSize: "0.75rem",
-              color: isOwnMessage ? "rgba(255,255,255,0.7)" : "#9ca3af",
-              textAlign: "right"
-            }}>
+            <div className={`shared-dream-date ${isOwnMessage ? 'own' : 'other'}`}>
               Rêvé le {new Date(dream.date).toLocaleDateString('fr-FR')}
             </div>
           )}
         </div>
 
         {/* Actions */}
-        <div style={{
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center",
-          fontSize: "0.75rem",
-          color: isOwnMessage ? "rgba(255,255,255,0.7)" : "#9ca3af"
-        }}>
+        <div className={`shared-dream-footer ${isOwnMessage ? 'own' : 'other'}`}>
           <span>ID: {dream.dream_id}</span>
           <span>{formatTime(timestamp)}</span>
         </div>

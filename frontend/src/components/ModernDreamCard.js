@@ -1,25 +1,20 @@
-// frontend/src/components/ModernDreamCard.js
 import React, { useState, useEffect } from "react";
 import QuickShareModal from "./QuickShareModal";
 import DreamComments from "./DreamComments";
 import { toggleDreamLike, updateDreamPrivacy } from "../services/api";
+import "../styles/DreamCard.css";
 
 const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDreamUpdate }) => {
   const [showQuickShareModal, setShowQuickShareModal] = useState(false);
   const [showComments, setShowComments] = useState(false);
   const [isLiking, setIsLiking] = useState(false);
   const [imageLoaded, setImageLoaded] = useState(false);
-  
-  // 🆕 États pour la privacy
   const [showPrivacyDropdown, setShowPrivacyDropdown] = useState(false);
   const [isUpdatingPrivacy, setIsUpdatingPrivacy] = useState(false);
   const [currentPrivacy, setCurrentPrivacy] = useState(dream.privacy);
-  
-  // États locaux pour les likes (pour mise à jour immédiate)
   const [localLikesCount, setLocalLikesCount] = useState(dream.likes_count || 0);
   const [localUserLiked, setLocalUserLiked] = useState(dream.user_liked || false);
 
-  // Fermer le dropdown privacy si on clique ailleurs
   useEffect(() => {
     const handleClickOutside = (event) => {
       if (showPrivacyDropdown) {
@@ -82,7 +77,6 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
       setCurrentPrivacy(newPrivacy);
       setShowPrivacyDropdown(false);
       
-      // Notifier le parent pour mettre à jour l'affichage
       if (onDreamUpdate) {
         onDreamUpdate({
           ...dream,
@@ -92,7 +86,6 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
       
     } catch (error) {
       console.error('Erreur changement privacy:', error);
-      // Afficher un message d'erreur ici si nécessaire
     } finally {
       setIsUpdatingPrivacy(false);
     }
@@ -103,7 +96,6 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
     
     setIsLiking(true);
     
-    // Mise à jour optimiste de l'UI
     const newUserLiked = !localUserLiked;
     const newLikesCount = newUserLiked ? localLikesCount + 1 : localLikesCount - 1;
     
@@ -113,7 +105,6 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
     try {
       const result = await toggleDreamLike(dream.dream_id);
       
-      // Mettre à jour avec les vraies données du serveur
       setLocalLikesCount(result.total_likes);
       setLocalUserLiked(result.user_liked);
       
@@ -127,7 +118,6 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
       
     } catch (error) {
       console.error('Erreur like:', error);
-      // Revenir à l'état précédent en cas d'erreur
       setLocalUserLiked(!newUserLiked);
       setLocalLikesCount(localLikesCount);
     } finally {
@@ -135,211 +125,70 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
     }
   };
 
-  const handleShareClick = () => {
-    setShowQuickShareModal(true);
-  };
-
-  const handleCommentClick = () => {
-    setShowComments(true);
-  };
-
+  const handleShareClick = () => setShowQuickShareModal(true);
+  const handleCommentClick = () => setShowComments(true);
   const handleDreamShared = (result, friend) => {
     console.log(`Rêve partagé avec ${friend.username} !`);
   };
 
-  // Vérifier si l'utilisateur peut partager ce rêve
   const canShare = currentUser && (
     dream.privacy === 'public' || 
     (dream.privacy === 'friends_only' && dream.user?.username === currentUser) ||
     dream.user?.username === currentUser
   );
 
+  const privacyOptions = [
+    { value: 'private', label: 'Privé', icon: '🔒', desc: 'Visible par vous seul' },
+    { value: 'friends_only', label: 'Amis seulement', icon: '👥', desc: 'Visible par vos amis' },
+    { value: 'public', label: 'Public', icon: '🌍', desc: 'Visible par tous' }
+  ];
+
   return (
     <>
-      <div style={{
-        background: 'rgba(255, 255, 255, 0.95)',
-        backdropFilter: 'blur(20px)',
-        WebkitBackdropFilter: 'blur(20px)',
-        borderRadius: '24px',
-        border: '1px solid rgba(255, 255, 255, 0.2)',
-        boxShadow: '0 8px 32px rgba(0, 0, 0, 0.1)',
-        overflow: 'hidden',
-        transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-        transform: 'scale(1)',
-        marginBottom: '2rem'
-      }}
-      onMouseEnter={(e) => {
-        e.currentTarget.style.transform = 'scale(1.02)';
-        e.currentTarget.style.boxShadow = '0 12px 40px rgba(0, 0, 0, 0.15)';
-      }}
-      onMouseLeave={(e) => {
-        e.currentTarget.style.transform = 'scale(1)';
-        e.currentTarget.style.boxShadow = '0 8px 32px rgba(0, 0, 0, 0.1)';
-      }}
-      >
+      <div className="dream-card">
         {/* Header avec auteur */}
         {showAuthor && dream.user && (
-          <div style={{
-            padding: '1.5rem 1.5rem 0 1.5rem',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between'
-          }}>
-            <div style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '1rem'
-            }}>
-              {/* Avatar utilisateur */}
-              <div style={{
-                width: '48px',
-                height: '48px',
-                borderRadius: '50%',
-                background: 'linear-gradient(135deg, #667eea 0%, #764ba2 100%)',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                color: 'white',
-                fontWeight: '600',
-                fontSize: '1.1rem',
-                boxShadow: '0 4px 15px rgba(102, 126, 234, 0.3)'
-              }}>
+          <div className="dream-card-header">
+            <div className="dream-author-info">
+              <div className="dream-author-avatar">
                 {dream.user.username?.[0]?.toUpperCase() || '?'}
               </div>
               
-              {/* Infos utilisateur */}
-              <div>
-                <div style={{
-                  fontWeight: '600',
-                  color: '#1f2937',
-                  fontSize: '1rem',
-                  marginBottom: '0.25rem'
-                }}>
-                  {dream.user.username}
-                </div>
-                <div style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.75rem',
-                  fontSize: '0.85rem',
-                  color: '#6b7280'
-                }}>
+              <div className="dream-author-details">
+                <h4>{dream.user.username}</h4>
+                <div className="dream-author-meta">
                   <span>{formatDate(dream.date)}</span>
                   <span>•</span>
                   
-                  {/* Sélecteur de privacy */}
-                  <div style={{
-                    position: 'relative',
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: '0.25rem'
-                  }}>
-                    {/* Si c'est le rêve de l'utilisateur, afficher un dropdown */}
+                  <div className="privacy-selector">
                     {currentUser && dream.user?.username === currentUser.username ? (
                       <>
                         <button
+                          className="privacy-button"
                           onClick={() => setShowPrivacyDropdown(!showPrivacyDropdown)}
                           disabled={isUpdatingPrivacy}
-                          style={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            gap: '0.25rem',
-                            background: 'rgba(59, 130, 246, 0.1)',
-                            border: '1px solid rgba(59, 130, 246, 0.2)',
-                            borderRadius: '12px',
-                            padding: '0.25rem 0.5rem',
-                            fontSize: '0.8rem',
-                            color: '#3b82f6',
-                            cursor: isUpdatingPrivacy ? 'not-allowed' : 'pointer',
-                            transition: 'all 0.2s ease'
-                          }}
                         >
                           {getPrivacyIcon(currentPrivacy)}
                           <span>{getPrivacyLabel(currentPrivacy)}</span>
-                          {!isUpdatingPrivacy && <span style={{ fontSize: '0.7rem' }}>▼</span>}
-                          {isUpdatingPrivacy && (
-                            <div style={{
-                              width: '12px',
-                              height: '12px',
-                              border: '2px solid rgba(59, 130, 246, 0.3)',
-                              borderTop: '2px solid #3b82f6',
-                              borderRadius: '50%',
-                              animation: 'spin 1s linear infinite'
-                            }} />
-                          )}
+                          {!isUpdatingPrivacy && <span>▼</span>}
+                          {isUpdatingPrivacy && <div className="dream-loading-spinner" />}
                         </button>
                         
-                        {/* Dropdown menu */}
                         {showPrivacyDropdown && (
-                          <div style={{
-                            position: 'absolute',
-                            top: '100%',
-                            left: 0,
-                            zIndex: 50,
-                            marginTop: '0.5rem',
-                            background: 'white',
-                            borderRadius: '12px',
-                            boxShadow: '0 10px 25px rgba(0, 0, 0, 0.15)',
-                            border: '1px solid rgba(0, 0, 0, 0.1)',
-                            minWidth: '180px',
-                            overflow: 'hidden'
-                          }}>
-                            {[
-                              { value: 'private', label: 'Privé', icon: '🔒', desc: 'Visible par vous seul' },
-                              { value: 'friends_only', label: 'Amis seulement', icon: '👥', desc: 'Visible par vos amis' },
-                              { value: 'public', label: 'Public', icon: '🌍', desc: 'Visible par tous' }
-                            ].map((option) => (
+                          <div className="privacy-dropdown">
+                            {privacyOptions.map((option) => (
                               <button
                                 key={option.value}
+                                className={`privacy-option ${currentPrivacy === option.value ? 'active' : ''}`}
                                 onClick={() => handlePrivacyChange(option.value)}
-                                style={{
-                                  width: '100%',
-                                  padding: '0.75rem 1rem',
-                                  background: currentPrivacy === option.value ? 'rgba(59, 130, 246, 0.1)' : 'transparent',
-                                  border: 'none',
-                                  textAlign: 'left',
-                                  cursor: 'pointer',
-                                  transition: 'background 0.2s ease',
-                                  display: 'flex',
-                                  alignItems: 'center',
-                                  gap: '0.75rem'
-                                }}
-                                onMouseEnter={(e) => {
-                                  if (currentPrivacy !== option.value) {
-                                    e.target.style.background = 'rgba(0, 0, 0, 0.05)';
-                                  }
-                                }}
-                                onMouseLeave={(e) => {
-                                  if (currentPrivacy !== option.value) {
-                                    e.target.style.background = 'transparent';
-                                  }
-                                }}
                               >
-                                <span style={{ fontSize: '1rem' }}>{option.icon}</span>
+                                <span className="privacy-option-icon">{option.icon}</span>
                                 <div>
-                                  <div style={{
-                                    fontSize: '0.9rem',
-                                    fontWeight: '500',
-                                    color: '#374151',
-                                    marginBottom: '0.125rem'
-                                  }}>
-                                    {option.label}
-                                  </div>
-                                  <div style={{
-                                    fontSize: '0.75rem',
-                                    color: '#6b7280'
-                                  }}>
-                                    {option.desc}
-                                  </div>
+                                  <div className="privacy-option-label">{option.label}</div>
+                                  <div className="privacy-option-desc">{option.desc}</div>
                                 </div>
                                 {currentPrivacy === option.value && (
-                                  <span style={{
-                                    marginLeft: 'auto',
-                                    fontSize: '0.8rem',
-                                    color: '#3b82f6'
-                                  }}>
-                                    ✓
-                                  </span>
+                                  <span className="privacy-option-check">✓</span>
                                 )}
                               </button>
                             ))}
@@ -347,16 +196,9 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
                         )}
                       </>
                     ) : (
-                      /* Si ce n'est pas le rêve de l'utilisateur, affichage simple */
-                      <div style={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: '0.25rem'
-                      }}>
+                      <div className="privacy-display">
                         {getPrivacyIcon(currentPrivacy)}
-                        <span style={{ textTransform: 'capitalize' }}>
-                          {getPrivacyLabel(currentPrivacy)}
-                        </span>
+                        <span>{getPrivacyLabel(currentPrivacy)}</span>
                       </div>
                     )}
                   </div>
@@ -364,114 +206,61 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
               </div>
             </div>
 
-            {/* Menu 3 points (optionnel) */}
-            <button style={{
-              background: 'none',
-              border: 'none',
-              cursor: 'pointer',
-              padding: '0.5rem',
-              borderRadius: '12px',
-              color: '#9ca3af',
-              transition: 'all 0.2s ease'
-            }}
-            onMouseEnter={(e) => {
-              e.target.style.background = 'rgba(156, 163, 175, 0.1)';
-              e.target.style.color = '#6b7280';
-            }}
-            onMouseLeave={(e) => {
-              e.target.style.background = 'none';
-              e.target.style.color = '#9ca3af';
-            }}
-            >
-              ⋯
-            </button>
+            <button className="dream-menu-button">⋯</button>
           </div>
         )}
 
         {/* Image du rêve */}
         {dream.img_b64 && (
-          <div style={{
-            position: 'relative',
-            margin: '1rem 1.5rem',
-            borderRadius: '16px',
-            overflow: 'hidden',
-            background: 'linear-gradient(45deg, #f3f4f6, #e5e7eb)',
-            aspectRatio: '16/10'
-          }}>
+          <div className="dream-image-container">
             {!imageLoaded && (
-              <div style={{
-                position: 'absolute',
-                inset: 0,
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                background: 'linear-gradient(45deg, #f3f4f6, #e5e7eb)',
-                color: '#9ca3af'
-              }}>
-                <div style={{
-                  width: '40px',
-                  height: '40px',
-                  border: '3px solid #e5e7eb',
-                  borderTop: '3px solid #3b82f6',
-                  borderRadius: '50%',
-                  animation: 'spin 1s linear infinite'
-                }} />
+              <div className="dream-image-loading">
+                <div className="dream-image-spinner" />
               </div>
             )}
             <img
               src={dream.img_b64}
               alt="Rêve visualisé"
+              className={`dream-image ${imageLoaded ? 'loaded' : 'loading'}`}
               onLoad={() => setImageLoaded(true)}
-              style={{
-                width: '100%',
-                height: '100%',
-                objectFit: 'cover',
-                transition: 'opacity 0.3s ease',
-                opacity: imageLoaded ? 1 : 0
-              }}
             />
-            
-            {/* Overlay gradient subtil */}
-            <div style={{
-              position: 'absolute',
-              bottom: 0,
-              left: 0,
-              right: 0,
-              height: '60px',
-              background: 'linear-gradient(transparent, rgba(0, 0, 0, 0.1))',
-              pointerEvents: 'none'
-            }} />
+            <div className="dream-image-overlay" />
           </div>
         )}
 
         {/* Contenu textuel */}
-        <div style={{ padding: '0 1.5rem 1rem 1.5rem' }}>
+        <div className="dream-content">
+          {/* 🆕 AFFICHAGE DE L'ÉMOTION */}
+          {(dream.emotion || dream.emotion_emoji) && (
+            <div className="dream-emotion">
+              <div className="dream-emotion-label">
+                😊 Ambiance détectée
+              </div>
+              <div className="dream-emotion-display">
+                <span className="dream-emotion-emoji">
+                  {dream.emotion_emoji || '😐'}
+                </span>
+                <div className="dream-emotion-details">
+                  <span className="dream-emotion-name">
+                    {dream.emotion || 'Neutre'}
+                  </span>
+                  {dream.emotion_confidence && (
+                    <span className="dream-emotion-confidence">
+                      {Math.round(dream.emotion_confidence * 100)}% de confiance
+                    </span>
+                  )}
+                </div>
+              </div>
+            </div>
+          )}
+
           {/* Prompt reformé */}
           {dream.reformed_prompt && (
-            <div style={{
-              marginBottom: '1rem',
-              padding: '1rem',
-              background: 'linear-gradient(135deg, rgba(59, 130, 246, 0.05) 0%, rgba(29, 78, 216, 0.05) 100%)',
-              borderRadius: '16px',
-              border: '1px solid rgba(59, 130, 246, 0.1)'
-            }}>
-              <div style={{
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                color: '#3b82f6',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
+            <div className="dream-interpretation">
+              <div className="dream-interpretation-label">
                 ✨ Interprétation IA
               </div>
-              <p style={{
-                margin: 0,
-                color: '#374151',
-                lineHeight: '1.6',
-                fontSize: '0.95rem'
-              }}>
+              <p className="dream-interpretation-text">
                 {dream.reformed_prompt}
               </p>
             </div>
@@ -479,86 +268,30 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
 
           {/* Transcription */}
           {dream.transcription && (
-            <div style={{
-              marginBottom: '1.5rem'
-            }}>
-              <div style={{
-                fontSize: '0.85rem',
-                fontWeight: '600',
-                color: '#6b7280',
-                marginBottom: '0.5rem',
-                display: 'flex',
-                alignItems: 'center',
-                gap: '0.5rem'
-              }}>
+            <div className="dream-transcription">
+              <div className="dream-transcription-label">
                 🎙️ Récit original
               </div>
-              <p style={{
-                margin: 0,
-                color: '#374151',
-                lineHeight: '1.7',
-                fontSize: '1rem'
-              }}>
+              <p className="dream-transcription-text">
                 {dream.transcription}
               </p>
             </div>
           )}
 
           {/* Actions */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            paddingTop: '1rem',
-            borderTop: '1px solid rgba(0, 0, 0, 0.06)'
-          }}>
-            <div style={{ display: 'flex', gap: '0.75rem' }}>
+          <div className="dream-actions">
+            <div className="dream-actions-left">
               {/* Bouton Like */}
               <button
+                className={`dream-action-button like ${localUserLiked ? 'liked' : 'not-liked'}`}
                 onClick={handleLikeClick}
                 disabled={!currentUser || isLiking}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '25px',
-                  border: 'none',
-                  background: localUserLiked 
-                    ? 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)'
-                    : 'rgba(239, 68, 68, 0.1)',
-                  color: localUserLiked ? 'white' : '#ef4444',
-                  cursor: (!currentUser || isLiking) ? 'not-allowed' : 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: localUserLiked 
-                    ? '0 4px 15px rgba(239, 68, 68, 0.3)' 
-                    : '0 2px 8px rgba(239, 68, 68, 0.15)',
-                  transform: 'scale(1)'
-                }}
-                onMouseEnter={(e) => {
-                  if (!isLiking && currentUser) {
-                    e.target.style.transform = 'scale(1.05)';
-                  }
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                }}
               >
-                <span style={{ fontSize: '1.1rem' }}>
+                <span className="dream-action-icon">
                   {localUserLiked ? '❤️' : '🤍'}
                 </span>
                 {localLikesCount > 0 && (
-                  <span style={{
-                    background: localUserLiked 
-                      ? 'rgba(255, 255, 255, 0.2)' 
-                      : 'rgba(239, 68, 68, 0.1)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '12px',
-                    fontSize: '0.8rem',
-                    fontWeight: '700'
-                  }}>
+                  <span className="dream-action-count">
                     {localLikesCount}
                   </span>
                 )}
@@ -566,41 +299,12 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
 
               {/* Bouton Commentaires */}
               <button
+                className="dream-action-button comment"
                 onClick={handleCommentClick}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '25px',
-                  border: 'none',
-                  background: 'rgba(59, 130, 246, 0.1)',
-                  color: '#3b82f6',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 2px 8px rgba(59, 130, 246, 0.15)',
-                  transform: 'scale(1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.background = 'rgba(59, 130, 246, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.background = 'rgba(59, 130, 246, 0.1)';
-                }}
               >
-                <span style={{ fontSize: '1.1rem' }}>💬</span>
+                <span className="dream-action-icon">💬</span>
                 {dream.comments_count > 0 && (
-                  <span style={{
-                    background: 'rgba(59, 130, 246, 0.1)',
-                    padding: '0.25rem 0.5rem',
-                    borderRadius: '12px',
-                    fontSize: '0.8rem',
-                    fontWeight: '700'
-                  }}>
+                  <span className="dream-action-count">
                     {dream.comments_count}
                   </span>
                 )}
@@ -610,33 +314,10 @@ const ModernDreamCard = ({ dream, showAuthor = true, currentUser = null, onDream
             {/* Bouton Partager */}
             {canShare && (
               <button
+                className="dream-action-button share"
                 onClick={handleShareClick}
-                style={{
-                  display: 'flex',
-                  alignItems: 'center',
-                  gap: '0.5rem',
-                  padding: '0.75rem 1.25rem',
-                  borderRadius: '25px',
-                  border: 'none',
-                  background: 'rgba(16, 185, 129, 0.1)',
-                  color: '#10b981',
-                  cursor: 'pointer',
-                  fontSize: '0.9rem',
-                  fontWeight: '600',
-                  transition: 'all 0.3s cubic-bezier(0.4, 0, 0.2, 1)',
-                  boxShadow: '0 2px 8px rgba(16, 185, 129, 0.15)',
-                  transform: 'scale(1)'
-                }}
-                onMouseEnter={(e) => {
-                  e.target.style.transform = 'scale(1.05)';
-                  e.target.style.background = 'rgba(16, 185, 129, 0.15)';
-                }}
-                onMouseLeave={(e) => {
-                  e.target.style.transform = 'scale(1)';
-                  e.target.style.background = 'rgba(16, 185, 129, 0.1)';
-                }}
               >
-                <span style={{ fontSize: '1.1rem' }}>📤</span>
+                <span className="dream-action-icon">📤</span>
                 Partager
               </button>
             )}

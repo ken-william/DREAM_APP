@@ -15,4 +15,7 @@ urlpatterns = [
     
     # 🆕 Gestion privacy
     path("<int:dream_id>/privacy", views.DreamUpdatePrivacyAPIView.as_view(), name="update_dream_privacy"),  # Changer privacy
+    
+    # 🆕 Export
+    path("<int:dream_id>/export", views.DreamExportAPIView.as_view(), name="export_dream"),  # Exporter en HTML
 ]

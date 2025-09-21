@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import api from "../services/api";
+import api, { updateDreamPrivacy } from "../services/api";
+import "../styles/Profile.css";
 
 export default function Profile() {
   const [me, setMe] = useState(null);
@@ -11,7 +12,7 @@ export default function Profile() {
   const navigate = useNavigate();
 
   useEffect(() => {
-    const token = localStorage.getItem("token"); // ✅ CORRECTION: "token" au lieu de "access"
+    const token = localStorage.getItem("token");
     if (!token) {
       navigate("/login");
       return;
@@ -67,9 +68,78 @@ export default function Profile() {
     }
   };
 
+  const handleExportDream = async (dreamId) => {
+    try {
+      const response = await api.get(`/api/dreams/${dreamId}/export`, {
+        responseType: 'blob' // Important pour le téléchargement de fichier
+      });
+      
+      // Créer un lien de téléchargement
+      const url = window.URL.createObjectURL(new Blob([response.data]));
+      const link = document.createElement('a');
+      link.href = url;
+      
+      // Extraire le nom de fichier du header Content-Disposition
+      const contentDisposition = response.headers['content-disposition'];
+      let filename = 'mon_reve.html';
+      if (contentDisposition) {
+        const match = contentDisposition.match(/filename="(.+)"/);  
+        if (match) {
+          filename = match[1];
+        }
+      }
+      
+      link.setAttribute('download', filename);
+      document.body.appendChild(link);
+      link.click();
+      link.remove();
+      window.URL.revokeObjectURL(url);
+      
+    } catch (error) {
+      console.error('Erreur export:', error);
+      alert('Erreur lors de l\'export du rêve. Veuillez réessayer.');
+    }
+  };
+
+  // 🆕 NOUVELLE FONCTION : Changer le statut de privacy d'un rêve
+  const handlePrivacyChange = async (dreamId, newPrivacy) => {
+    try {
+      await updateDreamPrivacy(dreamId, newPrivacy);
+      
+      // Mettre à jour le rêve dans la liste
+      setDreams(prevDreams => 
+        prevDreams.map(dream => 
+          dream.dream_id === dreamId 
+            ? { ...dream, privacy: newPrivacy }
+            : dream
+        )
+      );
+      
+      // Mettre à jour les statistiques
+      const updatedStats = { ...stats };
+      
+      // Recalculer les stats basé sur les nouveaux rêves
+      const updatedDreams = dreams.map(dream => 
+        dream.dream_id === dreamId ? { ...dream, privacy: newPrivacy } : dream
+      );
+      
+      updatedStats.public_dreams = updatedDreams.filter(d => d.privacy === 'public').length;
+      updatedStats.private_dreams = updatedDreams.filter(d => d.privacy === 'private').length;
+      updatedStats.friends_only_dreams = updatedDreams.filter(d => d.privacy === 'friends_only').length;
+      
+      setStats(updatedStats);
+      
+      console.log(`✅ Statut du rêve #${dreamId} changé vers: ${newPrivacy}`);
+      
+    } catch (error) {
+      console.error('Erreur changement privacy:', error);
+      alert('Erreur lors du changement de statut. Veuillez réessayer.');
+    }
+  };
+
   if (err) {
     return (
-      <div style={{ padding: 24, color: "crimson", textAlign: "center" }}>
+      <div className="profile-error">
         <h3>{err}</h3>
       </div>
     );
@@ -77,54 +147,26 @@ export default function Profile() {
 
   if (loading) {
     return (
-      <div style={{ 
-        padding: 60, 
-        textAlign: "center",
-        fontSize: "18px",
-        color: "#6c757d"
-      }}>
+      <div className="profile-loading">
         <div>🌙 Chargement de vos rêves...</div>
       </div>
     );
   }
 
   return (
-    <div style={{ 
-      maxWidth: "1200px", 
-      margin: "0 auto", 
-      padding: "2rem",
-      minHeight: "100vh",
-      background: "linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%)"
-    }}>
+    <div className="profile-container">
       {/* Header du profil */}
-      <div style={{
-        background: "white",
-        borderRadius: "15px",
-        padding: "2rem",
-        marginBottom: "2rem",
-        boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-        border: "1px solid #e9ecef"
-      }}>
-        <div style={{ display: "flex", alignItems: "center", gap: "2rem" }}>
-          <div style={{
-            width: "80px",
-            height: "80px",
-            borderRadius: "50%",
-            background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            fontSize: "32px",
-            color: "white"
-          }}>
+      <div className="profile-header">
+        <div className="profile-user-info">
+          <div className="profile-avatar">
             {me?.username?.charAt(0)?.toUpperCase() || me?.email?.charAt(0)?.toUpperCase() || '👤'}
           </div>
           
-          <div style={{ flex: 1 }}>
-            <h2 style={{ margin: "0 0 0.5rem 0", color: "#2c3e50" }}>
+          <div className="profile-details">
+            <h2 className="profile-username">
               {me?.username || 'Rêveur anonyme'}
             </h2>
-            <p style={{ margin: "0", color: "#6c757d", fontSize: "16px" }}>
+            <p className="profile-email">
               📧 {me?.email}
             </p>
           </div>
@@ -132,214 +174,149 @@ export default function Profile() {
       </div>
 
       {/* Statistiques */}
-      <div style={{
-        display: "grid",
-        gridTemplateColumns: "repeat(auto-fit, minmax(200px, 1fr))",
-        gap: "1rem",
-        marginBottom: "2rem"
-      }}>
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          textAlign: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          border: "1px solid #e9ecef"
-        }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌙</div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+      <div className="profile-stats-grid">
+        <div className="profile-stat-card">
+          <div className="profile-stat-icon">🌙</div>
+          <div className="profile-stat-number">
             {stats.total_dreams || 0}
           </div>
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Total des rêves</div>
+          <div className="profile-stat-label">Total des rêves</div>
         </div>
 
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          textAlign: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          border: "1px solid #e9ecef"
-        }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🌍</div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+        <div className="profile-stat-card">
+          <div className="profile-stat-icon">🌍</div>
+          <div className="profile-stat-number">
             {stats.public_dreams || 0}
           </div>
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Rêves publics</div>
+          <div className="profile-stat-label">Rêves publics</div>
         </div>
 
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          textAlign: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          border: "1px solid #e9ecef"
-        }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>🔒</div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+        <div className="profile-stat-card">
+          <div className="profile-stat-icon">🔒</div>
+          <div className="profile-stat-number">
             {stats.private_dreams || 0}
           </div>
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Rêves privés</div>
+          <div className="profile-stat-label">Rêves privés</div>
         </div>
 
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          textAlign: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          border: "1px solid #e9ecef"
-        }}>
-          <div style={{ fontSize: "2rem", marginBottom: "0.5rem" }}>👥</div>
-          <div style={{ fontSize: "24px", fontWeight: "bold", color: "#495057" }}>
+        <div className="profile-stat-card">
+          <div className="profile-stat-icon">👥</div>
+          <div className="profile-stat-number">
             {stats.friends_only_dreams || 0}
           </div>
-          <div style={{ color: "#6c757d", fontSize: "14px" }}>Entre amis</div>
+          <div className="profile-stat-label">Entre amis</div>
         </div>
       </div>
 
       {/* Titre de la section rêves */}
-      <div style={{
-        background: "white",
-        borderRadius: "12px",
-        padding: "1.5rem",
-        marginBottom: "1rem",
-        boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-        border: "1px solid #e9ecef"
-      }}>
-        <h3 style={{ margin: 0, color: "#2c3e50", display: "flex", alignItems: "center", gap: "0.5rem" }}>
+      <div className="profile-dreams-header">
+        <h3 className="profile-dreams-title">
           🎨 Vos rêves ({dreams.length})
         </h3>
       </div>
 
       {/* Liste des rêves */}
       {dreams.length === 0 ? (
-        <div style={{
-          background: "white",
-          borderRadius: "12px",
-          padding: "3rem",
-          textAlign: "center",
-          boxShadow: "0 2px 10px rgba(0,0,0,0.1)",
-          border: "1px solid #e9ecef",
-          color: "#6c757d"
-        }}>
-          <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>😴</div>
-          <h4 style={{ margin: "0 0 1rem 0" }}>Aucun rêve pour le moment</h4>
+        <div className="profile-empty-dreams">
+          <div className="profile-empty-icon">😴</div>
+          <h4 className="profile-empty-title">Aucun rêve pour le moment</h4>
           <p>Créez votre premier rêve pour commencer votre journal onirique !</p>
           <button 
             onClick={() => navigate("/create-dream")}
-            style={{
-              background: "linear-gradient(135deg, #667eea 0%, #764ba2 100%)",
-              color: "white",
-              border: "none",
-              borderRadius: "8px",
-              padding: "0.75rem 1.5rem",
-              fontSize: "16px",
-              cursor: "pointer",
-              marginTop: "1rem"
-            }}
+            className="profile-create-button"
           >
             🌙 Créer mon premier rêve
           </button>
         </div>
       ) : (
-        <div style={{
-          display: "grid",
-          gridTemplateColumns: "repeat(auto-fill, minmax(350px, 1fr))",
-          gap: "1.5rem"
-        }}>
+        <div className="profile-dreams-grid">
           {dreams.map((dream) => (
             <div
               key={dream.dream_id}
-              style={{
-                background: "white",
-                borderRadius: "15px",
-                overflow: "hidden",
-                boxShadow: "0 4px 20px rgba(0,0,0,0.1)",
-                border: "1px solid #e9ecef",
-                transition: "transform 0.2s, box-shadow 0.2s",
-                cursor: "pointer"
-              }}
-              onMouseEnter={(e) => {
-                e.currentTarget.style.transform = "translateY(-4px)";
-                e.currentTarget.style.boxShadow = "0 8px 30px rgba(0,0,0,0.15)";
-              }}
-              onMouseLeave={(e) => {
-                e.currentTarget.style.transform = "translateY(0)";
-                e.currentTarget.style.boxShadow = "0 4px 20px rgba(0,0,0,0.1)";
-              }}
+              className="profile-dream-card"
             >
               {/* Image du rêve */}
               {dream.img_b64 && (
-                <div style={{ width: "100%", height: "200px", overflow: "hidden" }}>
+                <div className="profile-dream-image">
                   <img 
                     src={dream.img_b64} 
                     alt="Image du rêve"
-                    style={{ 
-                      width: "100%", 
-                      height: "100%", 
-                      objectFit: "cover"
-                    }}
+                    className="profile-dream-img"
                   />
                 </div>
               )}
 
               {/* Contenu du rêve */}
-              <div style={{ padding: "1.5rem" }}>
-                {/* En-tête avec date et privacy */}
-                <div style={{ 
-                  display: "flex", 
-                  justifyContent: "space-between", 
-                  alignItems: "center",
-                  marginBottom: "1rem"
-                }}>
-                  <div style={{ color: "#6c757d", fontSize: "14px" }}>
+              <div className="profile-dream-content">
+                {/* En-tête avec date et privacy MODIFIABLE */}
+                <div className="profile-dream-header">
+                  <div className="profile-dream-date">
                     📅 {formatDate(dream.date)}
                   </div>
-                  <div style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.25rem",
-                    background: "#f8f9fa",
-                    padding: "0.25rem 0.5rem",
-                    borderRadius: "12px",
-                    fontSize: "12px",
-                    color: "#495057"
-                  }}>
-                    {getPrivacyIcon(dream.privacy)}
-                    {getPrivacyLabel(dream.privacy)}
+                  
+                  {/* 🆕 PRIVACY MODIFIABLE AVEC SELECT */}
+                  <div className="profile-dream-privacy-selector">
+                    <label className="profile-privacy-label">
+                      {getPrivacyIcon(dream.privacy)} Visibilité :
+                    </label>
+                    <select 
+                      value={dream.privacy}
+                      onChange={(e) => handlePrivacyChange(dream.dream_id, e.target.value)}
+                      className="profile-privacy-select"
+                    >
+                      <option value="public">🌍 Public</option>
+                      <option value="friends_only">👥 Amis uniquement</option>
+                      <option value="private">🔒 Privé</option>
+                    </select>
                   </div>
                 </div>
 
+                {/* 🆕 AFFICHAGE DE L'ÉMOTION */}
+                {(dream.emotion || dream.emotion_emoji) && (
+                  <div className="profile-dream-emotion">
+                    <div className="profile-emotion-label">
+                      😊 Ambiance détectée :
+                    </div>
+                    <div className="profile-emotion-display">
+                      <span className="profile-emotion-emoji">
+                        {dream.emotion_emoji || '😐'}
+                      </span>
+                      <span className="profile-emotion-name">
+                        {dream.emotion || 'Neutre'}
+                      </span>
+                      {dream.emotion_confidence && (
+                        <span className="profile-emotion-confidence">
+                          ({Math.round(dream.emotion_confidence * 100)}%)
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                )}
+
                 {/* Transcription */}
-                <div style={{ marginBottom: "1rem" }}>
-                  <h4 style={{ 
-                    margin: "0 0 0.5rem 0", 
-                    color: "#2c3e50",
-                    fontSize: "16px"
-                  }}>
+                <div className="profile-dream-transcription">
+                  <h4 className="profile-dream-transcription-title">
                     💭 Votre récit
                   </h4>
-                  <p style={{ 
-                    margin: 0, 
-                    color: "#495057",
-                    lineHeight: "1.5",
-                    fontSize: "14px"
-                  }}>
+                  <p className="profile-dream-transcription-text">
                     {dream.transcription}
                   </p>
                 </div>
 
-                {/* ID du rêve */}
-                <div style={{
-                  paddingTop: "1rem",
-                  borderTop: "1px solid #f0f0f0",
-                  fontSize: "12px",
-                  color: "#adb5bd",
-                  textAlign: "center"
-                }}>
-                  Rêve #{dream.dream_id}
+                {/* ID du rêve + Actions */}
+                <div className="profile-dream-footer">
+                  <div className="profile-dream-id">
+                    Rêve #{dream.dream_id}
+                  </div>
+                  
+                  {/* 🆕 BOUTON EXPORT */}
+                  <button 
+                    onClick={() => handleExportDream(dream.dream_id)}
+                    className="profile-export-button"
+                    title="Télécharger le rêve en HTML"
+                  >
+                    💾 Exporter
+                  </button>
                 </div>
               </div>
             </div>

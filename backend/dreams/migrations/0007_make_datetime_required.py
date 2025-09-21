@@ -1,0 +1,31 @@
+# Migration pour rendre created_at et updated_at non-nullable
+
+from django.db import migrations, models
+
+
+class Migration(migrations.Migration):
+
+    dependencies = [
+        ('dreams', '0006_populate_datetime_fields'),
+    ]
+
+    operations = [
+        # Rendre created_at non-nullable après avoir rempli les données
+        migrations.AlterField(
+            model_name='dream',
+            name='created_at',
+            field=models.DateTimeField(
+                auto_now_add=True,
+                verbose_name="Date et heure exactes"
+            ),
+        ),
+        # Rendre updated_at non-nullable
+        migrations.AlterField(
+            model_name='dream',
+            name='updated_at',
+            field=models.DateTimeField(
+                auto_now=True,
+                verbose_name="Dernière modification"
+            ),
+        ),
+    ]

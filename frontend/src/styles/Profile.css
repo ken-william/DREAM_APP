@@ -1,70 +1,487 @@
+/* Profile.css - Page de profil utilisateur */
+
+/* ================================
+   MAIN CONTAINER
+   ================================ */
 .profile-container {
-  max-width: 600px;
-  margin: auto;
-  padding: 2rem;
-  background: #fefefe;
-  border-radius: 12px;
-  box-shadow: 0 0 15px rgba(0,0,0,0.1);
-  font-family: 'Arial', sans-serif;
+  max-width: 1200px;
+  margin: 0 auto;
+  padding: 0.75rem; /* ENCORE RÉDUIT */
+  min-height: 100vh;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
 }
 
-.profile-container h1 {
-  text-align: center;
-  margin-bottom: 1rem;
+/* ================================
+   PROFILE HEADER - TRÈS RÉDUIT
+   ================================ */
+.profile-header {
+  background: white;
+  border-radius: 10px; /* RÉDUIT de 12px à 10px */
+  padding: 1rem; /* RÉDUIT de 1.5rem à 1rem */
+  margin-bottom: 1rem; /* RÉDUIT de 1.5rem à 1rem */
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06); /* OMBRE TRÈS SUBTILE */
+  border: 1px solid #e9ecef;
 }
 
-.logout-btn {
-  float: right;
-  background: #ccc;
-  border: none;
-  padding: 0.5rem 1rem;
-  cursor: pointer;
+.profile-user-info {
+  display: flex;
+  align-items: center;
+  gap: 1rem; /* RÉDUIT de 1.5rem à 1rem */
 }
 
-.profile-info {
-  margin-bottom: 2rem;
-  background: #f8f8f8;
-  padding: 1rem;
-  border-radius: 8px;
-}
-
-.form-section {
-  margin-bottom: 2rem;
-}
-
-.form-section h2 {
-  margin-bottom: 0.5rem;
-}
-
-.form-section input {
-  width: 100%;
-  padding: 0.6rem;
-  margin: 0.4rem 0;
-  border: 1px solid #ddd;
-  border-radius: 6px;
-}
-
-.form-section button {
-  background-color: #2b7cff;
+.profile-avatar {
+  width: 45px; /* TRÈS RÉDUIT de 60px à 45px */
+  height: 45px; /* TRÈS RÉDUIT de 60px à 45px */
+  border-radius: 50%;
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 18px; /* RÉDUIT de 24px à 18px */
   color: white;
-  padding: 0.7rem 1.2rem;
+  font-weight: 600;
+  flex-shrink: 0; /* Empêche la déformation */
+}
+
+.profile-details {
+  flex: 1;
+  min-width: 0; /* Permet le text-overflow */
+}
+
+.profile-username {
+  margin: 0 0 0.1rem 0; /* TRÈS RÉDUIT de 0.25rem à 0.1rem */
+  color: #2c3e50;
+  font-size: 1.1rem; /* RÉDUIT de 1.5rem à 1.1rem */
+  font-weight: 600;
+  line-height: 1.2; /* AJOUTÉ pour compacter */
+}
+
+.profile-email {
+  margin: 0;
+  color: #6c757d;
+  font-size: 0.8rem; /* RÉDUIT de 0.9rem à 0.8rem */
+  line-height: 1.2; /* AJOUTÉ pour compacter */
+}
+
+/* ================================
+   STATS GRID - RÉDUIT
+   ================================ */
+.profile-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); /* RÉDUIT de 200px */
+  gap: 0.75rem; /* RÉDUIT de 1rem */
+  margin-bottom: 1rem; /* RÉDUIT de 1.5rem */
+}
+
+.profile-stat-card {
+  background: white;
+  border-radius: 10px; /* RÉDUIT de 12px */
+  padding: 1.25rem; /* RÉDUIT de 1.5rem */
+  text-align: center;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06); /* OMBRE SUBTILE */
+  border: 1px solid #e9ecef;
+}
+
+.profile-stat-icon {
+  font-size: 1.75rem; /* RÉDUIT de 2rem */
+  margin-bottom: 0.4rem; /* RÉDUIT de 0.5rem */
+}
+
+.profile-stat-number {
+  font-size: 20px; /* RÉDUIT de 24px */
+  font-weight: bold;
+  color: #495057;
+}
+
+.profile-stat-label {
+  color: #6c757d;
+  font-size: 13px; /* RÉDUIT de 14px */
+}
+
+/* ================================
+   DREAMS SECTION - RÉDUIT
+   ================================ */
+.profile-dreams-header {
+  background: white;
+  border-radius: 10px; /* RÉDUIT de 12px */
+  padding: 0.85rem; /* RÉDUIT de 1rem */
+  margin-bottom: 0.75rem; /* RÉDUIT de 1rem */
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06); /* OMBRE SUBTILE */
+  border: 1px solid #e9ecef;
+}
+
+.profile-dreams-title {
+  margin: 0;
+  color: #2c3e50;
+  display: flex;
+  align-items: center;
+  gap: 0.4rem; /* RÉDUIT de 0.5rem */
+  font-size: 1.1rem; /* RÉDUIT de 1.25rem */
+  font-weight: 600;
+}
+
+/* ================================
+   EMPTY STATE
+   ================================ */
+.profile-empty-dreams {
+  background: white;
+  border-radius: 10px;
+  padding: 2.5rem; /* RÉDUIT de 3rem */
+  text-align: center;
+  box-shadow: 0 1px 8px rgba(0,0,0,0.06);
+  border: 1px solid #e9ecef;
+  color: #6c757d;
+}
+
+.profile-empty-icon {
+  font-size: 3.5rem; /* RÉDUIT de 4rem */
+  margin-bottom: 0.75rem; /* RÉDUIT de 1rem */
+}
+
+.profile-empty-title {
+  margin: 0 0 0.75rem 0; /* RÉDUIT de 1rem */
+  font-size: 1.1rem; /* AJOUTÉ pour contrôler */
+}
+
+.profile-create-button {
+  background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+  color: white;
   border: none;
-  border-radius: 6px;
+  border-radius: 8px;
+  padding: 0.65rem 1.25rem; /* RÉDUIT */
+  font-size: 14px; /* RÉDUIT de 16px */
+  cursor: pointer;
+  margin-top: 0.75rem; /* RÉDUIT de 1rem */
+  transition: all 0.2s ease;
+}
+
+.profile-create-button:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 15px rgba(102, 126, 234, 0.3);
+}
+
+/* ================================
+   DREAMS GRID
+   ================================ */
+.profile-dreams-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); /* RÉDUIT de 350px */
+  gap: 1.25rem; /* RÉDUIT de 1.5rem */
+}
+
+/* ================================
+   DREAM CARD - LÉGÈREMENT RÉDUIT
+   ================================ */
+.profile-dream-card {
+  background: white;
+  border-radius: 12px; /* RÉDUIT de 15px */
+  overflow: hidden;
+  box-shadow: 0 2px 15px rgba(0,0,0,0.08); /* OMBRE RÉDUITE */
+  border: 1px solid #e9ecef;
+  transition: transform 0.2s, box-shadow 0.2s;
   cursor: pointer;
 }
 
-.form-section button.danger {
-  background-color: #e74c3c;
+.profile-dream-card:hover {
+  transform: translateY(-3px); /* RÉDUIT de -4px */
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12); /* OMBRE RÉDUITE */
 }
 
-.message {
-  text-align: center;
-  font-weight: bold;
-  color: green;
+.profile-dream-image {
+  width: 100%;
+  height: 180px; /* RÉDUIT de 200px */
+  overflow: hidden;
 }
 
-.loading {
+.profile-dream-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.profile-dream-content {
+  padding: 1.25rem; /* RÉDUIT de 1.5rem */
+}
+
+.profile-dream-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start; /* CHANGÉ pour aligner en haut */
+  margin-bottom: 0.85rem; /* RÉDUIT de 1rem */
+  gap: 1rem; /* AJOUTÉ pour espacement */
+}
+
+.profile-dream-date {
+  color: #6c757d;
+  font-size: 13px; /* RÉDUIT de 14px */
+}
+
+/* ANCIEN STYLE PRIVACY - GARDÉ POUR COMPATIBILITÉ */
+.profile-dream-privacy {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+  background: #f8f9fa;
+  padding: 0.2rem 0.45rem; /* RÉDUIT */
+  border-radius: 10px; /* RÉDUIT de 12px */
+  font-size: 11px; /* RÉDUIT de 12px */
+  color: #495057;
+}
+
+/* 🆕 EMOTION DANS LE PROFIL - NOUVEAU */
+.profile-dream-emotion {
+  margin-bottom: 0.85rem;
+  padding: 0.6rem 0.8rem;
+  background: linear-gradient(135deg, rgba(255, 193, 7, 0.08) 0%, rgba(255, 152, 0, 0.08) 100%);
+  border-radius: 8px;
+  border-left: 3px solid #ffc107;
+}
+
+.profile-emotion-label {
+  font-size: 12px;
+  font-weight: 600;
+  color: #f57c00;
+  margin-bottom: 0.4rem;
+}
+
+.profile-emotion-display {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.profile-emotion-emoji {
+  font-size: 1.1rem;
+}
+
+.profile-emotion-name {
+  font-weight: 600;
+  color: #424242;
+  font-size: 12px;
+  text-transform: capitalize;
+}
+
+.profile-emotion-confidence {
+  font-size: 10px;
+  color: #757575;
+  font-style: italic;
+}
+
+.profile-dream-transcription {
+  margin-bottom: 0.85rem; /* RÉDUIT de 1rem */
+}
+
+.profile-dream-transcription-title {
+  margin: 0 0 0.4rem 0; /* RÉDUIT de 0.5rem */
+  color: #2c3e50;
+  font-size: 15px; /* RÉDUIT de 16px */
+}
+
+.profile-dream-transcription-text {
+  margin: 0;
+  color: #495057;
+  line-height: 1.4; /* RÉDUIT de 1.5 */
+  font-size: 13px; /* RÉDUIT de 14px */
+}
+
+.profile-dream-footer {
+  padding-top: 0.85rem; /* RÉDUIT de 1rem */
+  border-top: 1px solid #f0f0f0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.profile-dream-id {
+  font-size: 11px; /* RÉDUIT de 12px */
+  color: #adb5bd;
+}
+
+/* 🆕 BOUTON EXPORT - NOUVEAU */
+.profile-export-button {
+  background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  padding: 0.4rem 0.8rem;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  display: flex;
+  align-items: center;
+  gap: 0.3rem;
+  box-shadow: 0 2px 8px rgba(40, 167, 69, 0.2);
+}
+
+.profile-export-button:hover {
+  background: linear-gradient(135deg, #218838 0%, #1abc9c 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 12px rgba(40, 167, 69, 0.3);
+}
+
+.profile-export-button:active {
+  transform: translateY(0);
+}
+
+/* ================================
+   ERROR STATE
+   ================================ */
+.profile-error {
+  padding: 20px; /* RÉDUIT de 24px */
+  color: crimson;
   text-align: center;
-  margin-top: 4rem;
-  font-size: 1.2rem;
+}
+
+/* ================================
+   LOADING STATE
+   ================================ */
+.profile-loading {
+  padding: 50px; /* RÉDUIT de 60px */
+  text-align: center;
+  font-size: 16px; /* RÉDUIT de 18px */
+  color: #6c757d;
+}
+
+/* ================================
+   RESPONSIVE
+   ================================ */
+@media (max-width: 768px) {
+  .profile-container {
+    padding: 0.5rem;
+  }
+  
+  .profile-header {
+    padding: 0.85rem;
+  }
+  
+  .profile-user-info {
+    flex-direction: column;
+    text-align: center;
+    gap: 0.75rem;
+  }
+  
+  .profile-avatar {
+    width: 40px;
+    height: 40px;
+    font-size: 16px;
+  }
+  
+  .profile-username {
+    font-size: 1rem;
+  }
+  
+  .profile-email {
+    font-size: 0.75rem;
+  }
+  
+  .profile-stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+    gap: 0.6rem;
+  }
+  
+  .profile-stat-card {
+    padding: 1rem;
+  }
+  
+  .profile-dreams-grid {
+    grid-template-columns: 1fr;
+    gap: 1rem;
+  }
+  
+  .profile-empty-dreams {
+    padding: 1.5rem;
+  }
+}
+
+/* ================================
+   🆕 PRIVACY SELECTOR - NOUVEAU
+   ================================ */
+.profile-dream-privacy-selector {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  align-items: flex-end;
+}
+
+.profile-privacy-label {
+  font-size: 0.75rem;
+  color: #6c757d;
+  font-weight: 600;
+  margin-bottom: 0;
+  text-align: right;
+}
+
+.profile-privacy-select {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border: 2px solid #dee2e6;
+  border-radius: 8px;
+  padding: 0.4rem 0.6rem;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: #495057;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  min-width: 130px;
+  text-align: center;
+}
+
+.profile-privacy-select:hover {
+  border-color: #adb5bd;
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  transform: translateY(-1px);
+}
+
+.profile-privacy-select:focus {
+  outline: none;
+  border-color: #667eea;
+  box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.15);
+  background: white;
+}
+
+.profile-privacy-select option {
+  background: white;
+  color: #495057;
+  padding: 0.25rem;
+}
+
+@media (max-width: 480px) {
+  .profile-container {
+    padding: 0.25rem;
+  }
+  
+  .profile-header {
+    padding: 0.65rem;
+    margin-bottom: 0.75rem;
+  }
+  
+  .profile-username {
+    font-size: 0.95rem;
+  }
+  
+  .profile-email {
+    font-size: 0.7rem;
+  }
+  
+  .profile-avatar {
+    width: 35px;
+    height: 35px;
+    font-size: 14px;
+  }
+  
+  /* RESPONSIVE POUR PRIVACY SELECTOR */
+  .profile-dream-privacy-selector {
+    align-items: flex-start;
+  }
+  
+  .profile-privacy-label {
+    text-align: left;
+    font-size: 0.7rem;
+  }
+  
+  .profile-privacy-select {
+    min-width: 110px;
+    font-size: 0.7rem;
+    padding: 0.35rem 0.5rem;
+  }
 }

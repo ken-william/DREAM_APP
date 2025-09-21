@@ -1,18 +1,18 @@
-// frontend/src/components/messaging.js
 import React, { useEffect, useState, useRef } from "react";
 import { useNavigate, useParams } from "react-router-dom";
 import { 
   getFriendsList, 
   getMessagesWithFriend, 
   sendTextMessage,
-  getUserDreams,
+  getShareableDreams,  // ✅ CORRECTION: Utiliser getShareableDreams au lieu de getUserDreams
   shareDreamWithFriend
 } from "../services/api";
 import SharedDreamMessage from "./SharedDreamMessage";
+import "../styles/Messaging.css";
 
 export default function Messaging({ currentUser }) {
   const navigate = useNavigate();
-  const { username } = useParams(); // ami sélectionné (optionnel)
+  const { username } = useParams();
   const messagesEndRef = useRef(null);
   
   const [friends, setFriends] = useState([]);
@@ -21,13 +21,10 @@ export default function Messaging({ currentUser }) {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [sending, setSending] = useState(false);
-  
-  // Modal de partage de rêve
   const [showShareModal, setShowShareModal] = useState(false);
   const [userDreams, setUserDreams] = useState([]);
   const [loadingDreams, setLoadingDreams] = useState(false);
 
-  // Auto-scroll vers le bas
   const scrollToBottom = () => {
     messagesEndRef.current?.scrollIntoView({ behavior: "smooth" });
   };
@@ -36,7 +33,6 @@ export default function Messaging({ currentUser }) {
     scrollToBottom();
   }, [messages]);
 
-  // Redirige vers login si pas de token
   useEffect(() => {
     const token = localStorage.getItem("token");
     if (!token) {
@@ -45,7 +41,6 @@ export default function Messaging({ currentUser }) {
     }
   }, [navigate]);
 
-  // Charger la liste d'amis
   useEffect(() => {
     const loadFriends = async () => {
       setError("");
@@ -63,7 +58,6 @@ export default function Messaging({ currentUser }) {
     }
   }, [currentUser]);
 
-  // Charger la conversation si un ami est sélectionné
   useEffect(() => {
     const loadThread = async () => {
       setError("");
@@ -120,7 +114,6 @@ export default function Messaging({ currentUser }) {
   };
 
   const handleDreamShared = (sharedMessage) => {
-    // Ajouter le message de rêve partagé à la conversation
     setMessages((prev) => [...prev, sharedMessage]);
   };
 
@@ -128,10 +121,12 @@ export default function Messaging({ currentUser }) {
     setShowShareModal(true);
     setLoadingDreams(true);
     try {
-      const dreams = await getUserDreams();
+      const response = await getShareableDreams();  // ✅ CORRECTION
+      const dreams = response?.dreams || response || [];
+      console.log('🌅 Rêves partageables chargés:', dreams.length);
       setUserDreams(Array.isArray(dreams) ? dreams : []);
     } catch (err) {
-      console.error('Erreur chargement rêves:', err);
+      console.error('Erreur chargement rêves partageables:', err);
       setUserDreams([]);
     } finally {
       setLoadingDreams(false);
@@ -176,171 +171,52 @@ export default function Messaging({ currentUser }) {
       );
     }
 
-    // Message texte classique
     return (
-      <div
-        key={message.id}
-        style={{
-          alignSelf: isOwnMessage ? "flex-end" : "flex-start",
-          maxWidth: "70%",
-          marginBottom: "1rem"
-        }}
-      >
-        <div style={{
-          backgroundColor: isOwnMessage ? "#3b82f6" : "#fff",
-          color: isOwnMessage ? "white" : "#374151",
-          padding: "0.75rem 1rem",
-          borderRadius: "18px",
-          boxShadow: "0 1px 2px rgba(0, 0, 0, 0.1)",
-          border: isOwnMessage ? "none" : "1px solid #e5e7eb"
-        }}>
-          <div style={{ marginBottom: "0.25rem" }}>
-            {message.text}
-          </div>
-          <div style={{ 
-            fontSize: "0.75rem", 
-            opacity: 0.7,
-            textAlign: "right"
-          }}>
-            {formatTime(message.created_at)}
-          </div>
+      <div key={message.id} className={`message-item ${isOwnMessage ? 'own' : 'other'}`}>
+        <div className={`message-bubble ${isOwnMessage ? 'own' : 'other'}`}>
+          <div className="message-text">{message.text}</div>
+          <div className="message-time">{formatTime(message.created_at)}</div>
         </div>
       </div>
     );
   };
 
   return (
-    <div style={{ 
-      padding: "1rem",
-      maxWidth: "1400px",
-      margin: "0 auto",
-      height: "calc(100vh - 100px)"
-    }}>
-      <div style={{ 
-        display: "grid", 
-        gridTemplateColumns: "320px 1fr", 
-        gap: "1rem",
-        height: "100%"
-      }}>
+    <div className="messaging-container">
+      <div className="messaging-grid">
         
         {/* Sidebar - Liste des amis */}
-        <aside style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          padding: "1.5rem",
-          backgroundColor: "#fff",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden"
-        }}>
-          <div style={{
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center",
-            marginBottom: "1.5rem"
-          }}>
-            <h3 style={{ margin: 0, color: "#374151" }}>
-              💬 Messagerie
-            </h3>
-            <span style={{
-              backgroundColor: "#3b82f6",
-              color: "white",
-              borderRadius: "50%",
-              width: "24px",
-              height: "24px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              fontSize: "0.8rem",
-              fontWeight: "bold"
-            }}>
-              {friends.length}
-            </span>
+        <aside className="messaging-sidebar">
+          <div className="messaging-sidebar-header">
+            <h3 className="messaging-sidebar-title">💬 Messagerie</h3>
+            <span className="messaging-sidebar-badge">{friends.length}</span>
           </div>
           
           {friends.length === 0 ? (
-            <div style={{
-              textAlign: "center",
-              padding: "2rem 1rem",
-              color: "#6b7280",
-              flex: 1,
-              display: "flex",
-              flexDirection: "column",
-              justifyContent: "center"
-            }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
-              <p style={{ marginBottom: "1rem" }}>Aucun ami pour le moment.</p>
+            <div className="messaging-no-friends">
+              <div className="messaging-no-friends-icon">👥</div>
+              <p>Aucun ami pour le moment.</p>
               <button 
                 onClick={() => navigate('/social')}
-                style={{
-                  background: "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  padding: "0.75rem 1rem",
-                  cursor: "pointer",
-                  fontWeight: "500"
-                }}
+                className="messaging-find-friends-btn"
               >
                 🔍 Trouver des amis
               </button>
             </div>
           ) : (
-            <div style={{ 
-              display: "flex", 
-              flexDirection: "column", 
-              gap: "0.5rem",
-              overflowY: "auto",
-              flex: 1
-            }}>
+            <div className="messaging-friends-list">
               {friends.map((friend) => (
                 <button
                   key={friend.id || friend.username}
                   onClick={() => openConversation(friend)}
-                  style={{
-                    display: "flex",
-                    alignItems: "center",
-                    gap: "0.75rem",
-                    padding: "1rem",
-                    border: username === friend.username ? "2px solid #3b82f6" : "1px solid #e5e7eb",
-                    borderRadius: "12px",
-                    backgroundColor: username === friend.username ? "#eff6ff" : "#fff",
-                    cursor: "pointer",
-                    textAlign: "left",
-                    width: "100%",
-                    transition: "all 0.2s"
-                  }}
+                  className={`messaging-friend-item ${username === friend.username ? 'active' : ''}`}
                 >
-                  <div style={{
-                    width: "44px",
-                    height: "44px",
-                    borderRadius: "50%",
-                    backgroundColor: "#3b82f6",
-                    color: "white",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    fontSize: "18px",
-                    fontWeight: "bold",
-                    flexShrink: 0
-                  }}>
+                  <div className="messaging-friend-avatar">
                     {friend.username?.charAt(0)?.toUpperCase() || '?'}
                   </div>
-                  <div style={{ flex: 1, minWidth: 0 }}>
-                    <div style={{ 
-                      fontWeight: "600", 
-                      color: "#374151",
-                      marginBottom: "0.25rem"
-                    }}>
-                      {friend.username}
-                    </div>
-                    <div style={{ 
-                      fontSize: "0.85rem", 
-                      color: "#6b7280",
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      whiteSpace: "nowrap"
-                    }}>
+                  <div className="messaging-friend-info">
+                    <div className="messaging-friend-name">{friend.username}</div>
+                    <div className="messaging-friend-status">
                       {username === friend.username ? "Conversation active" : "Cliquer pour discuter"}
                     </div>
                   </div>
@@ -351,52 +227,25 @@ export default function Messaging({ currentUser }) {
         </aside>
 
         {/* Zone de conversation */}
-        <section style={{
-          border: "1px solid #e5e7eb",
-          borderRadius: "12px",
-          backgroundColor: "#fff",
-          display: "flex",
-          flexDirection: "column",
-          overflow: "hidden"
-        }}>
+        <section className="messaging-conversation">
           
           {/* Header de conversation */}
-          <div style={{
-            borderBottom: "1px solid #e5e7eb",
-            padding: "1.25rem 1.5rem",
-            backgroundColor: "#f9fafb",
-            display: "flex",
-            justifyContent: "space-between",
-            alignItems: "center"
-          }}>
+          <div className="messaging-conversation-header">
             <div>
-              <h3 style={{ margin: 0, color: "#374151", marginBottom: "0.25rem" }}>
+              <h3 className="messaging-conversation-title">
                 {username ? `💬 ${username}` : "💬 Messagerie"}
               </h3>
               {username && (
-                <p style={{ margin: 0, fontSize: "0.85rem", color: "#6b7280" }}>
+                <p className="messaging-conversation-subtitle">
                   Conversation privée
                 </p>
               )}
             </div>
             
-            {/* Bouton partager un rêve */}
             {username && (
               <button
                 onClick={handleOpenShareModal}
-                style={{
-                  display: "flex",
-                  alignItems: "center",
-                  gap: "0.5rem",
-                  padding: "0.75rem 1rem",
-                  backgroundColor: "#8b5cf6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "8px",
-                  cursor: "pointer",
-                  fontWeight: "500",
-                  fontSize: "0.9rem"
-                }}
+                className="messaging-share-dream-btn"
               >
                 🌙 Partager un rêve
               </button>
@@ -405,77 +254,31 @@ export default function Messaging({ currentUser }) {
 
           {/* Messages d'erreur */}
           {error && (
-            <div style={{
-              backgroundColor: "#fee2e2",
-              border: "1px solid #fecaca",
-              color: "#dc2626",
-              padding: "0.75rem 1.5rem",
-              margin: "1rem",
-              borderRadius: "8px",
-              fontSize: "0.9rem"
-            }}>
+            <div className="messaging-error">
               ⚠️ {error}
             </div>
           )}
 
           {/* Zone des messages */}
-          <div style={{
-            flex: 1,
-            padding: "1.5rem",
-            overflowY: "auto",
-            backgroundColor: "#fafafa",
-            display: "flex",
-            flexDirection: "column",
-            minHeight: 0
-          }}>
+          <div className="messaging-messages-area">
             {loading ? (
-              <div style={{ 
-                textAlign: "center", 
-                padding: "3rem", 
-                color: "#6b7280",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: 1
-              }}>
+              <div className="messaging-loading">
                 <div className="spinner-border text-primary mb-3" role="status">
                   <span className="visually-hidden">Chargement...</span>
                 </div>
                 <div>Chargement des messages...</div>
               </div>
             ) : messages.length === 0 ? (
-              <div style={{ 
-                textAlign: "center", 
-                padding: "3rem", 
-                color: "#6b7280",
-                display: "flex",
-                flexDirection: "column",
-                alignItems: "center",
-                justifyContent: "center",
-                flex: 1
-              }}>
+              <div className="messaging-empty-state">
                 {username ? (
                   <>
-                    <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>💬</div>
-                    <h4 style={{ marginBottom: "0.5rem", color: "#374151" }}>
-                      Début de conversation
-                    </h4>
-                    <p style={{ marginBottom: "1.5rem" }}>
-                      Aucun message avec {username}. Commencez la conversation !
-                    </p>
-                    <div style={{ display: "flex", gap: "1rem" }}>
+                    <div className="messaging-empty-icon">💬</div>
+                    <h4 className="messaging-empty-title">Début de conversation</h4>
+                    <p>Aucun message avec {username}. Commencez la conversation !</p>
+                    <div className="messaging-empty-actions">
                       <button
                         onClick={handleOpenShareModal}
-                        style={{
-                          padding: "0.75rem 1.5rem",
-                          backgroundColor: "#8b5cf6",
-                          color: "white",
-                          border: "none",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          fontWeight: "500"
-                        }}
+                        className="messaging-empty-btn primary"
                       >
                         🌙 Partager un rêve
                       </button>
@@ -483,19 +286,15 @@ export default function Messaging({ currentUser }) {
                   </>
                 ) : (
                   <>
-                    <div style={{ fontSize: "4rem", marginBottom: "1rem" }}>🙋‍♂️</div>
-                    <h4 style={{ marginBottom: "0.5rem", color: "#374151" }}>
-                      Choisissez un ami
-                    </h4>
-                    <p>
-                      Sélectionnez un ami dans la liste pour commencer à discuter.
-                    </p>
+                    <div className="messaging-empty-icon">🙋‍♂️</div>
+                    <h4 className="messaging-empty-title">Choisissez un ami</h4>
+                    <p>Sélectionnez un ami dans la liste pour commencer à discuter.</p>
                   </>
                 )}
               </div>
             ) : (
               <>
-                <div style={{ display: "flex", flexDirection: "column" }}>
+                <div className="messaging-messages-list">
                   {messages.map(renderMessage)}
                 </div>
                 <div ref={messagesEndRef} />
@@ -504,18 +303,7 @@ export default function Messaging({ currentUser }) {
           </div>
 
           {/* Zone de saisie */}
-          <form 
-            onSubmit={handleSendText} 
-            style={{ 
-              borderTop: "1px solid #e5e7eb",
-              padding: "1.25rem 1.5rem",
-              backgroundColor: "#fff",
-              display: "flex",
-              flexDirection: "column",
-              gap: "1rem"
-            }}
-          >
-            {/* Zone de texte au-dessus */}
+          <form onSubmit={handleSendText} className="messaging-input-form">
             <div>
               <textarea
                 value={text}
@@ -529,58 +317,23 @@ export default function Messaging({ currentUser }) {
                     handleSendText(e);
                   }
                 }}
-                style={{ 
-                  width: "100%", 
-                  padding: "0.75rem 1rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "12px",
-                  outline: "none",
-                  fontSize: "0.9rem",
-                  resize: "vertical",
-                  minHeight: "80px",
-                  maxHeight: "150px",
-                  fontFamily: "inherit"
-                }}
+                className="messaging-textarea"
               />
             </div>
             
-            {/* Boutons en bas */}
-            <div style={{ display: "flex", justifyContent: "flex-end", gap: "1rem" }}>
+            <div className="messaging-input-actions">
               <button 
                 disabled={!username || !text.trim() || sending} 
                 type="submit"
-                style={{
-                  backgroundColor: (!username || !text.trim() || sending) ? "#d1d5db" : "#3b82f6",
-                  color: "white",
-                  border: "none",
-                  borderRadius: "12px",
-                  padding: "0.75rem 1.5rem",
-                  cursor: (!username || !text.trim() || sending) ? "not-allowed" : "pointer",
-                  fontSize: "0.9rem",
-                  fontWeight: "600",
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: "0.5rem",
-                  minWidth: "120px"
-                }}
+                className={`messaging-send-btn ${!username || !text.trim() || sending ? 'disabled' : 'enabled'}`}
               >
                 {sending ? (
                   <>
-                    <div style={{
-                      width: "16px",
-                      height: "16px",
-                      border: "2px solid rgba(255,255,255,0.3)",
-                      borderTop: "2px solid white",
-                      borderRadius: "50%",
-                      animation: "spin 1s linear infinite"
-                    }} />
+                    <div className="messaging-send-spinner" />
                     Envoi...
                   </>
                 ) : (
-                  <>
-                    📤 Envoyer
-                  </>
+                  <>📤 Envoyer</>
                 )}
               </button>
             </div>
@@ -588,152 +341,76 @@ export default function Messaging({ currentUser }) {
         </section>
       </div>
 
-      {/* Modal de partage de rêve simplifié */}
+      {/* Modal de partage de rêve */}
       {showShareModal && (
-        <div style={{
-          position: "fixed",
-          top: 0,
-          left: 0,
-          right: 0,
-          bottom: 0,
-          backgroundColor: "rgba(0, 0, 0, 0.5)",
-          display: "flex",
-          alignItems: "center",
-          justifyContent: "center",
-          zIndex: 1000,
-          padding: "1rem"
-        }}>
-          <div style={{
-            backgroundColor: "white",
-            borderRadius: "12px",
-            width: "100%",
-            maxWidth: "600px",
-            maxHeight: "80vh",
-            overflow: "hidden",
-            boxShadow: "0 20px 50px rgba(0, 0, 0, 0.3)"
-          }}>
-            {/* Header */}
-            <div style={{
-              padding: "1.5rem",
-              borderBottom: "1px solid #e5e7eb",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center"
-            }}>
-              <h3 style={{ margin: 0, color: "#374151" }}>
+        <div className="messaging-share-modal-overlay">
+          <div className="messaging-share-modal">
+            <div className="messaging-share-modal-header">
+              <h3 className="messaging-share-modal-title">
                 🌙 Partager un rêve avec {username}
               </h3>
               <button
                 onClick={() => setShowShareModal(false)}
-                style={{
-                  background: "none",
-                  border: "none",
-                  fontSize: "24px",
-                  cursor: "pointer",
-                  color: "#6b7280"
-                }}
+                className="messaging-share-modal-close"
               >
                 ×
               </button>
             </div>
 
-            {/* Contenu */}
-            <div style={{
-              padding: "1.5rem",
-              maxHeight: "60vh",
-              overflowY: "auto"
-            }}>
+            <div className="messaging-share-modal-content">
               {loadingDreams ? (
-                <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+                <div className="messaging-share-modal-loading">
                   🔄 Chargement de vos rêves...
                 </div>
               ) : userDreams.length === 0 ? (
-                <div style={{ textAlign: "center", padding: "3rem", color: "#6b7280" }}>
-                  <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>🌙</div>
-                  <p>Aucun rêve à partager.</p>
+                <div className="messaging-share-modal-empty">
+                  <div className="messaging-share-modal-empty-icon">🌙</div>
+                  <h4>Aucun rêve à partager</h4>
+                  <p>Vous n'avez aucun rêve <strong>public</strong> ou <strong>visible aux amis</strong>.</p>
+                  <p className="text-muted small">Les rêves privés ne peuvent pas être partagés.</p>
                   <button
                     onClick={() => {
                       setShowShareModal(false);
                       navigate('/create-dream');
                     }}
-                    style={{
-                      padding: "0.75rem 1.5rem",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      border: "none",
-                      borderRadius: "8px",
-                      cursor: "pointer",
-                      fontWeight: "500"
-                    }}
+                    className="messaging-share-create-btn"
                   >
                     ✨ Créer un rêve
                   </button>
                 </div>
               ) : (
                 <div>
-                  <p style={{ color: "#6b7280", marginBottom: "1.5rem" }}>
-                    Choisissez un rêve à partager avec {username} :
-                  </p>
+                <p className="messaging-share-description">
+                Choisissez un rêve à partager avec {username} :
+                </p>
+                    <p className="text-muted small mb-3">
+                      🔒 Seuls vos rêves <strong>publics</strong> et <strong>visibles aux amis</strong> peuvent être partagés.
+                    </p>
                   
-                  <div style={{
-                    display: "grid",
-                    gap: "1rem",
-                    maxHeight: "400px",
-                    overflowY: "auto"
-                  }}>
+                  <div className="messaging-dreams-grid">
                     {userDreams.map((dream) => (
                       <div
                         key={dream.dream_id}
                         onClick={() => handleShareDream(dream.dream_id)}
-                        style={{
-                          display: "flex",
-                          gap: "1rem",
-                          padding: "1rem",
-                          border: "1px solid #e5e7eb",
-                          borderRadius: "8px",
-                          cursor: "pointer",
-                          transition: "all 0.2s",
-                          backgroundColor: "#fff"
-                        }}
-                        onMouseEnter={(e) => {
-                          e.target.style.backgroundColor = "#f3f4f6";
-                        }}
-                        onMouseLeave={(e) => {
-                          e.target.style.backgroundColor = "#fff";
-                        }}
+                        className="messaging-dream-item"
                       >
                         {dream.img_b64 && (
                           <img 
                             src={dream.img_b64} 
                             alt="Rêve" 
-                            style={{ 
-                              width: "80px", 
-                              height: "80px",
-                              objectFit: "cover",
-                              borderRadius: "8px",
-                              flexShrink: 0
-                            }} 
+                            className="messaging-dream-image"
                           />
                         )}
-                        <div style={{ flex: 1, minWidth: 0 }}>
-                          <div style={{
-                            fontWeight: "600",
-                            color: "#374151",
-                            marginBottom: "0.25rem"
-                          }}>
-                            Rêve du {new Date(dream.date).toLocaleDateString('fr-FR')}
+                        <div className="messaging-dream-info">
+                          <div className="messaging-dream-header">
+                            <div className="messaging-dream-date">
+                              Rêve du {new Date(dream.date).toLocaleDateString('fr-FR')}
+                            </div>
+                            <div className="messaging-dream-privacy">
+                              {dream.privacy === 'public' ? '🌍 Public' : '👥 Amis'}
+                            </div>
                           </div>
-                          <p style={{
-                            margin: 0,
-                            fontSize: "0.9rem",
-                            color: "#6b7280",
-                            lineHeight: "1.4",
-                            overflow: "hidden",
-                            textOverflow: "ellipsis",
-                            display: "-webkit-box",
-                            WebkitLineClamp: 2,
-                            WebkitBoxOrient: "vertical"
-                          }}>
+                          <p className="messaging-dream-text">
                             {dream.transcription || dream.reformed_prompt || 'Aucune description'}
                           </p>
                         </div>
@@ -744,24 +421,10 @@ export default function Messaging({ currentUser }) {
               )}
             </div>
 
-            {/* Footer */}
-            <div style={{
-              padding: "1.5rem",
-              borderTop: "1px solid #e5e7eb",
-              display: "flex",
-              justifyContent: "flex-end"
-            }}>
+            <div className="messaging-share-modal-footer">
               <button
                 onClick={() => setShowShareModal(false)}
-                style={{
-                  padding: "0.75rem 1.5rem",
-                  border: "1px solid #d1d5db",
-                  borderRadius: "8px",
-                  backgroundColor: "white",
-                  color: "#374151",
-                  cursor: "pointer",
-                  fontWeight: "500"
-                }}
+                className="messaging-share-cancel-btn"
               >
                 Annuler
               </button>
@@ -769,14 +432,6 @@ export default function Messaging({ currentUser }) {
           </div>
         </div>
       )}
-
-      {/* CSS pour l'animation de loading */}
-      <style>{`
-        @keyframes spin {
-          0% { transform: rotate(0deg); }
-          100% { transform: rotate(360deg); }
-        }
-      `}</style>
     </div>
   );
 }

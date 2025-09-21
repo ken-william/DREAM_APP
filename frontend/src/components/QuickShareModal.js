@@ -1,7 +1,7 @@
-// frontend/src/components/QuickShareModal.js
 import React, { useState, useEffect } from "react";
 import { getFriendsList, shareDreamWithFriend } from "../services/api";
 import { useNavigate } from "react-router-dom";
+import "../styles/QuickShareModal.css";
 
 const QuickShareModal = ({ show, onClose, dream, onDreamShared }) => {
   const navigate = useNavigate();
@@ -71,110 +71,52 @@ const QuickShareModal = ({ show, onClose, dream, onDreamShared }) => {
   if (!show) return null;
 
   return (
-    <div style={{
-      position: "fixed",
-      top: 0,
-      left: 0,
-      right: 0,
-      bottom: 0,
-      backgroundColor: "rgba(0, 0, 0, 0.5)",
-      display: "flex",
-      alignItems: "center",
-      justifyContent: "center",
-      zIndex: 1000,
-      padding: "1rem"
-    }}>
-      <div style={{
-        backgroundColor: "white",
-        borderRadius: "12px",
-        width: "100%",
-        maxWidth: "500px",
-        maxHeight: "80vh",
-        overflow: "hidden",
-        boxShadow: "0 20px 50px rgba(0, 0, 0, 0.3)"
-      }}>
+    <div className="quick-share-overlay">
+      <div className="quick-share-modal">
         {/* Header */}
-        <div style={{
-          padding: "1.5rem",
-          borderBottom: "1px solid #e5e7eb",
-          display: "flex",
-          justifyContent: "space-between",
-          alignItems: "center"
-        }}>
-          <h3 style={{ margin: 0, color: "#374151" }}>
+        <div className="quick-share-header">
+          <h3 className="quick-share-title">
             📤 Partager ce rêve
           </h3>
           <button
             onClick={onClose}
-            style={{
-              background: "none",
-              border: "none",
-              fontSize: "24px",
-              cursor: "pointer",
-              color: "#6b7280"
-            }}
+            className="quick-share-close"
           >
             ×
           </button>
         </div>
 
         {/* Contenu */}
-        <div style={{
-          padding: "1.5rem",
-          maxHeight: "60vh",
-          overflowY: "auto"
-        }}>
+        <div className="quick-share-content">
           {/* Preview du rêve */}
           {dream && (
-            <div style={{
-              backgroundColor: "#f8f9fa",
-              borderRadius: "8px",
-              padding: "1rem",
-              marginBottom: "1.5rem",
-              border: "1px solid #e5e7eb"
-            }}>
-              <div style={{ display: "flex", gap: "1rem", alignItems: "center", marginBottom: "0.75rem" }}>
+            <div className="dream-preview">
+              <div className="dream-preview-header">
                 {dream.img_b64 && (
                   <img 
                     src={dream.img_b64} 
                     alt="Rêve" 
-                    style={{ 
-                      width: "60px", 
-                      height: "60px",
-                      objectFit: "cover",
-                      borderRadius: "8px"
-                    }} 
+                    className="dream-preview-image"
                   />
                 )}
-                <div>
-                  <div style={{ fontWeight: "600", color: "#374151" }}>
+                <div className="dream-preview-info">
+                  <div className="dream-preview-author">
                     Rêve de {dream.user?.username}
                   </div>
-                  <div style={{ fontSize: "0.85rem", color: "#6b7280" }}>
+                  <div className="dream-preview-privacy">
                     {dream.privacy === 'public' ? '🌍 Public' : '👥 Amis'}
                   </div>
                 </div>
               </div>
-              <p style={{
-                margin: 0,
-                fontSize: "0.9rem",
-                color: "#6b7280",
-                fontStyle: "italic",
-                lineHeight: "1.4"
-              }}>
+              <p className="dream-preview-text">
                 "{dream.transcription?.substring(0, 100)}..."
               </p>
             </div>
           )}
 
           {/* Message d'accompagnement */}
-          <div style={{ marginBottom: "1.5rem" }}>
-            <label style={{ 
-              display: "block", 
-              marginBottom: "0.5rem", 
-              fontWeight: "500",
-              color: "#374151"
-            }}>
+          <div className="message-input-section">
+            <label className="message-input-label">
               💬 Message d'accompagnement :
             </label>
             <textarea
@@ -182,98 +124,47 @@ const QuickShareModal = ({ show, onClose, dream, onDreamShared }) => {
               onChange={(e) => setMessage(e.target.value)}
               placeholder={`Regarde ce rêve de ${dream?.user?.username} !`}
               rows={3}
-              style={{
-                width: "100%",
-                padding: "0.75rem",
-                border: "1px solid #d1d5db",
-                borderRadius: "8px",
-                resize: "vertical",
-                fontSize: "0.9rem"
-              }}
+              className="message-input-textarea"
             />
           </div>
 
           {error && (
-            <div style={{
-              backgroundColor: "#fee2e2",
-              border: "1px solid #fecaca",
-              color: "#dc2626",
-              padding: "0.75rem",
-              borderRadius: "6px",
-              marginBottom: "1rem"
-            }}>
+            <div className="share-error-message">
               {error}
             </div>
           )}
 
           {/* Liste des amis */}
           {loading ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
+            <div className="friends-loading">
               🔄 Chargement de vos amis...
             </div>
           ) : friends.length === 0 ? (
-            <div style={{ textAlign: "center", padding: "2rem", color: "#6b7280" }}>
-              <div style={{ fontSize: "3rem", marginBottom: "1rem" }}>👥</div>
+            <div className="friends-empty">
+              <div className="friends-empty-icon">👥</div>
               <p>Aucun ami trouvé.</p>
             </div>
           ) : (
             <div>
-              <h4 style={{ marginBottom: "1rem", color: "#374151" }}>
+              <h4 className="friends-list-title">
                 👥 Choisir un ami ({friends.length}) :
               </h4>
               
-              <div style={{
-                display: "grid",
-                gap: "0.75rem",
-                maxHeight: "200px",
-                overflowY: "auto"
-              }}>
+              <div className="friends-list-container">
                 {friends.map((friend) => (
                   <button
                     key={friend.id}
                     onClick={() => handleShare(friend)}
                     disabled={sharing}
-                    style={{
-                      display: "flex",
-                      alignItems: "center",
-                      gap: "0.75rem",
-                      padding: "0.75rem",
-                      border: "1px solid #e5e7eb",
-                      borderRadius: "8px",
-                      backgroundColor: "#fff",
-                      cursor: sharing ? "not-allowed" : "pointer",
-                      textAlign: "left",
-                      width: "100%",
-                      transition: "all 0.2s",
-                      opacity: sharing ? 0.6 : 1
-                    }}
-                    onMouseEnter={(e) => {
-                      if (!sharing) {
-                        e.target.style.backgroundColor = "#f3f4f6";
-                      }
-                    }}
-                    onMouseLeave={(e) => {
-                      e.target.style.backgroundColor = "#fff";
-                    }}
+                    className="friend-item"
                   >
-                    <div style={{
-                      width: "32px",
-                      height: "32px",
-                      borderRadius: "50%",
-                      backgroundColor: "#3b82f6",
-                      color: "white",
-                      display: "flex",
-                      alignItems: "center",
-                      justifyContent: "center",
-                      fontSize: "14px",
-                      fontWeight: "bold"
-                    }}>
+                    <div className="friend-avatar">
                       {friend.username?.charAt(0)?.toUpperCase() || '?'}
                     </div>
-                    <span style={{ fontWeight: "500", flex: 1 }}>
+                    <span className="friend-name">
                       {friend.username}
                     </span>
-                    {sharing && <span style={{ fontSize: "0.8rem", color: "#6b7280" }}>📤</span>}
+                    {sharing && <span className="friend-sharing-icon">📤</span>}
                   </button>
                 ))}
               </div>
@@ -282,23 +173,10 @@ const QuickShareModal = ({ show, onClose, dream, onDreamShared }) => {
         </div>
 
         {/* Footer */}
-        <div style={{
-          padding: "1.5rem",
-          borderTop: "1px solid #e5e7eb",
-          display: "flex",
-          justifyContent: "flex-end"
-        }}>
+        <div className="quick-share-footer">
           <button
             onClick={onClose}
-            style={{
-              padding: "0.75rem 1.5rem",
-              border: "1px solid #d1d5db",
-              borderRadius: "8px",
-              backgroundColor: "white",
-              color: "#374151",
-              cursor: "pointer",
-              fontWeight: "500"
-            }}
+            className="quick-share-cancel"
           >
             Annuler
           </button>

@@ -21,12 +21,21 @@ User = get_user_model()
 class RegisterView(APIView):
     permission_classes = [AllowAny]
     def post(self, request):
+        print(f"👤 Tentative d'inscription avec les données: {request.data}")
+        
         serializer = RegisterSerializer(data=request.data)
         if serializer.is_valid():
-            user = serializer.save()
-            token, _ = Token.objects.get_or_create(user=user)
-            return Response({'token': token.key}, status=201)
-        return Response(serializer.errors, status=400)
+            try:
+                user = serializer.save()
+                token, _ = Token.objects.get_or_create(user=user)
+                print(f"✅ Utilisateur créé avec succès: {user.username}")
+                return Response({'token': token.key}, status=201)
+            except Exception as e:
+                print(f"❌ Erreur lors de la création: {e}")
+                return Response({'error': f'Erreur lors de la création: {str(e)}'}, status=500)
+        else:
+            print(f"❌ Erreurs de validation: {serializer.errors}")
+            return Response(serializer.errors, status=400)
 
 class LoginView(APIView):
     permission_classes = [AllowAny]

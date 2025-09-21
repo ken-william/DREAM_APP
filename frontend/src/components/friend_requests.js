@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 import api from "../services/api"; // ✅ CORRECTION: Utiliser api.js centralisé
+import "../styles/FriendRequests.css";
 
 function FriendRequests() {
   const [requests, setRequests] = useState([]);
@@ -83,38 +84,39 @@ function FriendRequests() {
         <div className="row">
           {requests.map((req) => (
             <div key={req.id} className="col-md-6 col-lg-4 mb-3">
-              <div className="card">
-                <div className="card-body">
+              <div className="card friend-request-card">
+                <div className="card-body friend-request-body">
                   <div className="d-flex align-items-center mb-3">
-                    <div className="bg-primary text-white rounded-circle d-flex align-items-center justify-content-center me-3" 
-                         style={{ width: "50px", height: "50px", fontSize: "20px" }}>
+                    <div className="friend-avatar">
                       {/* ✅ CORRECTION: L'API retourne {"from": {"username": "..."}} */}
-                      {req.from?.username?.charAt(0)?.toUpperCase() || '?'}
+                      {req.from?.username?.charAt(0)?.toUpperCase() || '🚀'}
                     </div>
-                    <div>
-                      <h5 className="card-title mb-1">
+                    <div className="flex-grow-1">
+                      <h5 className="friend-username">
                         {req.from?.username || 'Utilisateur inconnu'}
                       </h5>
-                      <p className="text-muted small mb-0">
+                      <p className="friend-email">
                         {req.from?.email || ''}
                       </p>
                     </div>
                   </div>
                   
-                  <p className="card-text text-muted small mb-3">
-                    Souhaite être votre ami
-                  </p>
+                  <div className="friend-request-message">
+                    <p className="text-center mb-0">
+                      💬 Souhaite être votre ami
+                    </p>
+                  </div>
                   
                   <div className="d-grid gap-2">
                     <button 
                       onClick={() => respondToRequest(req.id, "accept")}
-                      className="btn btn-success"
+                      className="btn btn-success friend-accept-btn"
                     >
                       ✅ Accepter
                     </button>
                     <button 
                       onClick={() => respondToRequest(req.id, "reject")}
-                      className="btn btn-outline-danger"
+                      className="btn btn-outline-danger friend-reject-btn"
                     >
                       ❌ Refuser
                     </button>

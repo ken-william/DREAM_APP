@@ -9,7 +9,7 @@ from django.shortcuts import render
 
 from rest_framework.parsers import MultiPartParser, FormParser
 from django.http import HttpResponse
-from .utils import transcribe_audio, rephrase_text, generate_image_base64, save_in_db
+from .utils import transcribe_audio, rephrase_text, generate_image_base64, save_in_db, analyze_dream_emotion, export_dream_as_html, validate_audio_complete
 
 class DreamCreateAPIView(APIView):
     permission_classes = [IsAuthenticated]
@@ -22,10 +22,20 @@ class DreamCreateAPIView(APIView):
         try:
             audio_file = request.FILES.get("audio")
 
-            print(f"Format du fichier : {audio_file.content_type}")
-
             if not audio_file:
                 return Response({"error": "Fichier audio requis."}, status=400)
+            
+            # 🔒 VALIDATION SÉCURITÉ AUDIO
+            validation = validate_audio_complete(audio_file)
+            if not validation['valid']:
+                return Response({
+                    "error": "Fichier audio invalide",
+                    "details": validation['errors'],
+                    "file_info": validation['details']
+                }, status=400)
+            
+            print(f"Format du fichier : {audio_file.content_type}")
+            print(f"🔒 Validation audio: {validation['details']}")
             
             # Étape 1: Transcription
             transcription = transcribe_audio(audio_file)
@@ -74,10 +84,20 @@ class DreamGenerateAPIView(APIView):
         try:
             audio_file = request.FILES.get("audio")
 
-            print(f"Format du fichier : {audio_file.content_type}")
-
             if not audio_file:
                 return Response({"error": "Fichier audio requis."}, status=400)
+            
+            # 🔒 VALIDATION SÉCURITÉ AUDIO
+            validation = validate_audio_complete(audio_file)
+            if not validation['valid']:
+                return Response({
+                    "error": "Fichier audio invalide",
+                    "details": validation['errors'],
+                    "file_info": validation['details']
+                }, status=400)
+            
+            print(f"Format du fichier : {audio_file.content_type}")
+            print(f"🔒 Validation audio: {validation['details']}")
             
             # Étape 1: Transcription
             transcription = transcribe_audio(audio_file)
@@ -87,7 +107,11 @@ class DreamGenerateAPIView(APIView):
             prompt = rephrase_text(transcription)
             print(f"Prompt reformulé: {prompt}")
             
-            # Étape 3: Génération d'image (SANS sauvegarde)
+            # Étape 3: Analyse émotionnelle 🆕
+            emotion_data = analyze_dream_emotion(transcription)
+            print(f"Émotion détectée: {emotion_data.get('emotion')} {emotion_data.get('emoji')}")
+            
+            # Étape 4: Génération d'image (SANS sauvegarde)
             img_b64 = generate_image_base64(prompt)
             print("Image générée avec succès (pas encore sauvée)")
             
@@ -99,6 +123,7 @@ class DreamGenerateAPIView(APIView):
                 "transcription": transcription,
                 "prompt": prompt,
                 "image": img_b64,
+                "emotion": emotion_data,  # 🆕 AJOUTER L'ÉMOTION
                 # Données nécessaires pour la sauvegarde ultérieure
                 "preview_data": {
                     "transcription": transcription,
@@ -170,8 +195,27 @@ class DreamListAPIView(APIView):
             # Récupérer tous les rêves de l'utilisateur, triés par date (plus récent en premier)
             dreams = Dream.objects.filter(user=request.user).order_by('-date')
             
-            # Sérialiser les données
-            serializer = DreamSerializer(dreams, many=True)
+            # Utiliser DreamListSerializer ou sérialiser manuellement
+            dreams_data = []
+            for dream in dreams:
+                dream_data = {
+                    'dream_id': dream.dream_id,
+                    'transcription': dream.transcription,
+                    'reformed_prompt': dream.reformed_prompt,
+                    'img_b64': dream.img_b64,
+                    'date': dream.date,
+                    'privacy': dream.privacy,
+                    'emotion': dream.emotion,
+                    'emotion_confidence': dream.emotion_confidence,
+                    'emotion_emoji': dream.emotion_emoji,
+                    'emotion_color': dream.emotion_color,
+                    'user': {
+                        'id': dream.user.id,
+                        'username': dream.user.username,
+                        'email': dream.user.email
+                    }
+                }
+                dreams_data.append(dream_data)
             
             # Ajouter quelques stats
             stats = {
@@ -182,7 +226,7 @@ class DreamListAPIView(APIView):
             }
             
             return Response({
-                'dreams': serializer.data,
+                'dreams': dreams_data,
                 'stats': stats
             })
             
@@ -253,6 +297,11 @@ class PublicDreamsFeedAPIView(APIView):
                         'username': dream.user.username,
                         'email': dream.user.email
                     },
+                    # 🆕 DONNÉES ÉMOTIONNELLES
+                    'emotion': dream.emotion,
+                    'emotion_confidence': dream.emotion_confidence,
+                    'emotion_emoji': dream.emotion_emoji,
+                    'emotion_color': dream.emotion_color,
                     # 🆕 Nouvelles données sociales
                     'likes_count': likes_count,
                     'comments_count': comments_count,
@@ -364,6 +413,11 @@ class FriendsDreamsFeedAPIView(APIView):
                         'username': dream.user.username,
                         'email': dream.user.email
                     },
+                    # 🆕 DONNÉES ÉMOTIONNELLES
+                    'emotion': dream.emotion,
+                    'emotion_confidence': dream.emotion_confidence,
+                    'emotion_emoji': dream.emotion_emoji,
+                    'emotion_color': dream.emotion_color,
                     # 🆕 Nouvelles données sociales
                     'likes_count': likes_count,
                     'comments_count': comments_count,
@@ -433,4 +487,29 @@ class DreamUpdatePrivacyAPIView(APIView):
             print(f"Erreur dans DreamUpdatePrivacyAPIView: {str(e)}")
             return Response({
                 "error": f"Erreur lors de la mise à jour: {str(e)}"
+            }, status=500)
+
+
+class DreamExportAPIView(APIView):
+    """
+    API pour exporter un rêve en HTML
+    """
+    permission_classes = [IsAuthenticated]
+    
+    def get(self, request, dream_id):
+        try:
+            # Vérifier que le rêve existe et appartient à l'utilisateur
+            dream = Dream.objects.get(dream_id=dream_id, user=request.user)
+            
+            # Exporter le rêve en HTML
+            return export_dream_as_html(dream, request.user)
+            
+        except Dream.DoesNotExist:
+            return Response({
+                "error": "Rêve introuvable ou vous n'en êtes pas le propriétaire"
+            }, status=404)
+        except Exception as e:
+            print(f"Erreur dans DreamExportAPIView: {str(e)}")
+            return Response({
+                "error": f"Erreur lors de l'export: {str(e)}"
             }, status=500)

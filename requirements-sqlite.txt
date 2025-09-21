@@ -1,0 +1,37 @@
+# =====================================================
+# DÉPENDANCES PYTHON - SYNTHÉTISEUR DE RÊVES V1.0.0
+# Version SQLite optimisée pour production académique
+# =====================================================
+
+# --- FRAMEWORK WEB (CORE) ---
+django==4.2.11
+djangorestframework==3.15.1
+django-cors-headers==4.3.1
+djangorestframework-simplejwt==5.3.1
+
+# --- ENVIRONNEMENT ---
+python-dotenv==1.0.1
+
+# --- APIs IA (CORE FEATURES) ---
+groq==0.4.2
+requests==2.31.0
+
+# --- TESTS (CONSERVÉS POUR ÉVALUATION) ---
+django-behave==0.1.6
+behave==1.2.6
+coverage==7.4.3
+pytest==8.1.1
+pytest-django==4.8.0
+
+# --- FICHIERS STATIQUES & MEDIA ---
+whitenoise==6.6.0
+pillow==10.2.0
+
+# --- SERVEUR PRODUCTION ---
+gunicorn==21.2.0
+
+# --- SÉCURITÉ ---
+cryptography==42.0.5
+
+# --- UTILITAIRES ---
+python-dateutil==2.9.0

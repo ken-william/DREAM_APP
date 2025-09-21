@@ -90,6 +90,32 @@ export const getUserDreams = async () => {
   }
 };
 
+/**
+ * Récupérer seulement les rêves partageables (public + friends_only)
+ */
+export const getShareableDreams = async () => {
+  try {
+    setAuthHeader();
+    const response = await api.get('/api/dreams/list');
+    
+    // Filtrer côté client pour ne garder que les rêves partageables
+    const allDreams = response.data?.dreams || response.data || [];
+    const shareableDreams = allDreams.filter(dream => 
+      dream.privacy === 'public' || dream.privacy === 'friends_only'
+    );
+    
+    console.log(`📊 ${shareableDreams.length} rêves partageables sur ${allDreams.length} total`);
+    
+    return {
+      ...response.data,
+      dreams: shareableDreams
+    };
+  } catch (error) {
+    console.error('Erreur getShareableDreams:', error);
+    throw error;
+  }
+};
+
 // 🆕 API FONCTIONS POUR LA MESSAGERIE AMÉLIORÉE
 
 /**

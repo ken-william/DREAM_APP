@@ -2,6 +2,8 @@ import React, { useState } from "react";
 import { useNavigate, Link } from "react-router-dom";
 import "../styles/Auth.css";
 
+const API_BASE = process.env.REACT_APP_API_BASE || "http://127.0.0.1:8000";
+
 export default function RegisterForm() {
   const [formData, setFormData] = useState({ username: "", email: "", password: "" });
   const [error, setError] = useState("");
@@ -21,7 +23,7 @@ export default function RegisterForm() {
     setLoading(true);
 
     try {
-      const res = await fetch("http://localhost:8000/api/account/register/", {
+      const res = await fetch(`${API_BASE}/api/account/register/`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(formData),

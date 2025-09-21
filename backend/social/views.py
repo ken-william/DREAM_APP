@@ -87,14 +87,35 @@ def send_friend_request(request, username: str):
         return Response({"detail": "Utilisateur introuvable."}, status=status.HTTP_404_NOT_FOUND)
 
     # Existe déjà (pending/accepted) dans un sens ou l'autre ?
-    exists = FriendRequest.objects.filter(
+    existing = FriendRequest.objects.filter(
         (Q(from_user=me, to_user=other) | Q(from_user=other, to_user=me))
-    ).exclude(status="rejected").exists()
-    if exists:
+    ).exclude(status="rejected").first()
+    
+    if existing:
         return Response({"detail": "Demande déjà existante."}, status=status.HTTP_400_BAD_REQUEST)
 
-    fr = FriendRequest.objects.create(from_user=me, to_user=other, status="pending")
-    return Response({"id": fr.id, "detail": "Demande envoyée."}, status=status.HTTP_201_CREATED)
+    # Vérifier s'il y a une demande rejetée dans le même sens
+    rejected_request = FriendRequest.objects.filter(
+        from_user=me, to_user=other, status="rejected"
+    ).first()
+    
+    if rejected_request:
+        # Réutiliser la demande existante en changeant le status
+        rejected_request.status = "pending"
+        rejected_request.save(update_fields=["status"])
+        fr = rejected_request
+    else:
+        # Créer une nouvelle demande
+        fr = FriendRequest.objects.create(from_user=me, to_user=other, status="pending")
+    
+    # Retourner la réponse complète attendue par les tests
+    return Response({
+        "id": fr.id,
+        "status": fr.status,
+        "from_user": _serialize_user(fr.from_user),
+        "to_user": _serialize_user(fr.to_user),
+        "detail": "Demande envoyée."
+    }, status=status.HTTP_201_CREATED)
 
 
 @api_view(["GET"])

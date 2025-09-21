@@ -94,21 +94,33 @@ def step_auth_as(context, username, password):
 def step_pending_fr(context, from_user, to_user):
     f = User.objects.get(username=from_user)
     t = User.objects.get(username=to_user)
-    FriendRequest.objects.create(from_user=f, to_user=t, status="pending")
+    # Éviter les doublons avec get_or_create
+    FriendRequest.objects.get_or_create(
+        from_user=f, to_user=t, 
+        defaults={'status': 'pending'}
+    )
 
 
 @given('an accepted friend request exists between "{u1}" and "{u2}"')
 def step_accepted_fr(context, u1, u2):
     f = User.objects.get(username=u1)
     t = User.objects.get(username=u2)
-    FriendRequest.objects.create(from_user=f, to_user=t, status="accepted")
+    # Éviter les doublons avec get_or_create
+    FriendRequest.objects.get_or_create(
+        from_user=f, to_user=t,
+        defaults={'status': 'accepted'}
+    )
 
 
 @given('a rejected friend request exists from "{from_user}" to "{to_user}"')
 def step_rejected_fr(context, from_user, to_user):
     f = User.objects.get(username=from_user)
     t = User.objects.get(username=to_user)
-    FriendRequest.objects.create(from_user=f, to_user=t, status="rejected")
+    # Éviter les doublons avec get_or_create
+    FriendRequest.objects.get_or_create(
+        from_user=f, to_user=t,
+        defaults={'status': 'rejected'}
+    )
 
 
 # =========================
@@ -206,8 +218,8 @@ def step_list_contains_pending(context, from_user, to_user):
     assert isinstance(data, list), f"Expected list, got {type(data)}: {data}"
 
     found = any(
-        (item.get("from_user") or {}).get("username") == from_user
-        and (item.get("to_user") or {}).get("username") == to_user
+        (item.get("from") or {}).get("username") == from_user
+        and (item.get("to") or {}).get("username") == to_user
         and item.get("status") == "pending"
         for item in data
     )

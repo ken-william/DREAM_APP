@@ -57,14 +57,33 @@ def check_test_coverage():
     return success
 
 def check_bdd_tests():
-    """Vérifie les tests BDD"""
-    print("\n🥒 VÉRIFICATION TESTS BDD")
+    """Vérifie les tests BDD avec behave direct"""
+    print("\n🥒 VÉRIFICATION TESTS BDD (behave direct)")
     print("=" * 40)
     
-    run_command(
-        "python manage.py behave",
-        "Exécution tests BDD (Behavior-Driven Development)"
-    )
+    # S'assurer qu'on est dans le répertoire backend
+    if os.path.exists('backend'):
+        os.chdir('backend')
+        print("📝 Changement vers le dossier backend")
+    elif not os.path.exists('config'):
+        print("⚠️ Erreur: Lancez le script depuis la racine du projet ou le dossier backend")
+        return False
+    
+    # Tests des différents modules
+    modules = ['accounts', 'dreams', 'social']
+    success = True
+    
+    for module in modules:
+        print(f"\n📝 Tests BDD {module}:")
+        result = run_command(
+            f"behave {module}/features/",
+            f"Tests BDD {module}"
+        )
+        if not result:
+            print(f"⚠️ Problème avec les tests {module}")
+            success = False
+    
+    return success
 
 def run_load_tests():
     """Lance les tests de charge"""

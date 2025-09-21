@@ -16,12 +16,23 @@ python-dotenv==1.0.1
 groq==0.4.2
 requests==2.31.0
 
-# --- TESTS (CONSERVÉS POUR ÉVALUATION) ---
-django-behave==0.1.6
+# --- TESTS BDD (BEHAVE SEUL) ---
 behave==1.2.6
 coverage==7.4.3
 pytest==8.1.1
 pytest-django==4.8.0
+
+# Tests de charge
+locust==2.17.0
+
+# Tests API  
+requests-mock==1.11.0
+
+# Monitoring performance
+psutil==5.9.5
+
+# Génération de données factices
+faker==19.6.2
 
 # --- FICHIERS STATIQUES & MEDIA ---
 whitenoise==6.6.0

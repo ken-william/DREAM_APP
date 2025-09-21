@@ -5,7 +5,7 @@ from django.test import TestCase
 from django.contrib.auth import get_user_model
 
 from dreams.models import Dream
-from dreams.serializers import DreamSerializer, DreamListSerializer, UserSerializer
+from dreams.serializers import DreamSerializer, DreamListSerializer, DreamUserSerializer
 
 User = get_user_model()
 
@@ -31,14 +31,14 @@ class DreamSerializerTests(TestCase):
             emotion_emoji='😊'
         )
     
-    def test_user_serializer_fields(self):
-        """Test des champs du UserSerializer"""
-        serializer = UserSerializer(self.user)
-        expected_fields = ['id', 'username', 'email']
+    def test_dream_user_serializer_fields(self):
+        """Test des champs du DreamUserSerializer"""
+        serializer = DreamUserSerializer(self.user)
+        expected_fields = ['id', 'username', 'photo_profil']
         
         self.assertEqual(set(serializer.data.keys()), set(expected_fields))
         self.assertEqual(serializer.data['username'], 'testuser')
-        self.assertEqual(serializer.data['email'], 'test@example.com')
+        self.assertEqual(serializer.data['id'], self.user.id)
     
     def test_dream_serializer_complete_fields(self):
         """Test que DreamSerializer contient tous les champs"""
@@ -46,7 +46,7 @@ class DreamSerializerTests(TestCase):
         expected_fields = [
             'dream_id', 'user', 'transcription', 'reformed_prompt', 
             'img_b64', 'date', 'privacy', 'emotion', 'emotion_confidence',
-            'emotion_emoji', 'emotion_color'
+            'emotion_emoji', 'emotion_color', 'likes_count', 'comments_count', 'user_liked'
         ]
         
         self.assertEqual(set(serializer.data.keys()), set(expected_fields))
@@ -63,6 +63,8 @@ class DreamSerializerTests(TestCase):
         # Mais has_image devrait être présent
         self.assertIn('has_image', serializer.data)
         self.assertTrue(serializer.data['has_image'])
+        # Vérifier la transcription tronquée
+        self.assertIn('truncated_transcription', serializer.data)
     
     def test_dream_serializer_with_null_emotion(self):
         """Test serialization avec émotion nulle"""
@@ -93,4 +95,4 @@ class DreamSerializerTests(TestCase):
         serializer = DreamListSerializer(dream_no_image)
         
         self.assertFalse(serializer.data['has_image'])
-        self.assertEqual(serializer.data['transcription'], "Rêve sans image")
+        self.assertEqual(serializer.data['truncated_transcription'], "Rêve sans image")
